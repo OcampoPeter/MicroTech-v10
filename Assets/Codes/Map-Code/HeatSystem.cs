@@ -1,3 +1,6 @@
+// WHERE TO PUT THIS FILE: Assets > Codes > Player-Code (replace the old HeatSystem.cs)
+// WHERE TO USE IT: drag it onto Player3DModel (the object with the Character Controller)
+
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -9,28 +12,39 @@ public class HeatSystem : MonoBehaviour
 
     [Header("Heat Settings")]
     [SerializeField] float maxHeat = 100f;
-    [SerializeField] float deathThreshold = 90f;   // die at 90%
-    [SerializeField] float heatPerSecond = 2f;     // slow buildup
-    [SerializeField] float coolPerSecond = 15f;    // faster cooldown on coolant
+    [SerializeField] float dangerThreshold = 90f;      // danger zone starts here
+    [SerializeField] float heatPerSecond = 2.5f;       // normal buildup (below danger)
+    [SerializeField] float coolPerSecond = 15f;        // cooling while standing on coolant
+    [SerializeField] float dangerSeconds = 30f;        // time to go from 90% to 100%
 
-    [Header("Cooling")]
-    [SerializeField] LayerMask coolantLayer;       // pick "Coolant" in the Inspector
+    [Header("Overheat Result")]
+    [SerializeField] int corruptionOnOverheat = 100;   // corruption given at 100% heat
+
+    [Header("Cooling (step check)")]
+    [SerializeField] LayerMask coolantLayer;           // pick "Coolant"
+    [SerializeField] float footRadius = 0.4f;          // size of the check at your feet
 
     [Header("UI")]
     [SerializeField] Slider heatBar;
-    [SerializeField] Image fillImage;              // drag the Slider's "Fill" object here
+    [SerializeField] Image fillImage;                  // the Slider's "Fill" object
 
     [Header("Bar Colors (blue -> orange -> red)")]
-    [SerializeField] Color coolColor = new Color(0.25f, 0.55f, 1f);   // blue
-    [SerializeField] Color warmColor = new Color(1f, 0.6f, 0.1f);     // orange
-    [SerializeField] Color hotColor  = new Color(0.95f, 0.15f, 0.1f); // red
+    [SerializeField] Color coolColor = new Color(0.25f, 0.55f, 1f);
+    [SerializeField] Color warmColor = new Color(1f, 0.6f, 0.1f);
+    [SerializeField] Color hotColor  = new Color(0.95f, 0.15f, 0.1f);
 
+    CharacterController cc;
     float currentHeat;
-    int coolantCount;      // how many coolant zones we're touching
-    bool isDead;
+    bool overheated;
     bool systemActive;
 
-    bool IsCooling => coolantCount > 0;
+    // other scripts (like CoolantIcons) read this to know when to show warnings
+    public bool IsInDanger => systemActive && !overheated && currentHeat >= dangerThreshold;
+
+    void Awake()
+    {
+        cc = GetComponent<CharacterController>();
+    }
 
     void OnEnable()
     {
@@ -51,11 +65,8 @@ public class HeatSystem : MonoBehaviour
     void ApplyScene(string sceneName)
     {
         systemActive = sceneName == activeSceneName;
-
-        // fresh start every time we enter (or leave) the CPU scene
         currentHeat = 0f;
-        coolantCount = 0;
-        isDead = false;
+        overheated = false;
 
         if (heatBar != null)
         {
@@ -67,12 +78,22 @@ public class HeatSystem : MonoBehaviour
 
     void Update()
     {
-        if (!systemActive || isDead) return;
+        if (!systemActive || overheated) return;
 
-        if (IsCooling)
+        if (IsOnCoolant())
+        {
             currentHeat -= coolPerSecond * Time.deltaTime;
+        }
+        else if (currentHeat >= dangerThreshold)
+        {
+            // danger zone: slowly climbs from 90% to 100% over dangerSeconds
+            float dangerRate = (maxHeat - dangerThreshold) / dangerSeconds;
+            currentHeat += dangerRate * Time.deltaTime;
+        }
         else
+        {
             currentHeat += heatPerSecond * Time.deltaTime;
+        }
 
         currentHeat = Mathf.Clamp(currentHeat, 0f, maxHeat);
 
@@ -80,43 +101,57 @@ public class HeatSystem : MonoBehaviour
             heatBar.value = currentHeat / maxHeat;
         UpdateBarColor();
 
-        if (currentHeat >= deathThreshold)
-            Die();
+        if (currentHeat >= maxHeat)
+            Overheat();
+    }
+
+    // Looks at the spot under your feet: is there a Coolant-layer object?
+    bool IsOnCoolant()
+    {
+        return Physics.CheckSphere(GetFeetPosition(), footRadius, coolantLayer,
+                                   QueryTriggerInteraction.Collide);
+    }
+
+    Vector3 GetFeetPosition()
+    {
+        if (cc == null) cc = GetComponent<CharacterController>();
+        if (cc == null) return transform.position;
+
+        Bounds b = cc.bounds;
+        return new Vector3(b.center.x, b.min.y, b.center.z);
+    }
+
+    void Overheat()
+    {
+        overheated = true;
+        Debug.Log("Heat reached 100%!");
+
+        if (CorruptionSystem.Instance != null)
+            CorruptionSystem.Instance.AddCorruption(corruptionOnOverheat);
+        else
+            Debug.LogWarning("HeatSystem: no CorruptionSystem found in the scene.");
     }
 
     void UpdateBarColor()
     {
         if (fillImage == null) return;
 
-        // 0 = no heat, 1 = death threshold (so it's fully red right at 90%)
-        float t = Mathf.Clamp01(currentHeat / deathThreshold);
-
-        fillImage.color = t < 0.5f
-            ? Color.Lerp(coolColor, warmColor, t / 0.5f)
-            : Color.Lerp(warmColor, hotColor, (t - 0.5f) / 0.5f);
+        // blue -> orange from 0% to 90%, orange -> red from 90% to 100%
+        if (currentHeat < dangerThreshold)
+        {
+            fillImage.color = Color.Lerp(coolColor, warmColor, currentHeat / dangerThreshold);
+        }
+        else
+        {
+            float t = (currentHeat - dangerThreshold) / (maxHeat - dangerThreshold);
+            fillImage.color = Color.Lerp(warmColor, hotColor, t);
+        }
     }
 
-    void OnTriggerEnter(Collider other)
+    // Select the player in the Scene view to see the foot check (green ball)
+    void OnDrawGizmosSelected()
     {
-        if (systemActive && IsInCoolantLayer(other.gameObject))
-            coolantCount++;
-    }
-
-    void OnTriggerExit(Collider other)
-    {
-        if (systemActive && IsInCoolantLayer(other.gameObject))
-            coolantCount = Mathf.Max(0, coolantCount - 1);
-    }
-
-    bool IsInCoolantLayer(GameObject obj)
-    {
-        return (coolantLayer.value & (1 << obj.layer)) != 0;
-    }
-
-    void Die()
-    {
-        isDead = true;
-        Debug.Log("Player overheated!");
-        // trigger death screen / respawn here
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireSphere(GetFeetPosition(), footRadius);
     }
 }

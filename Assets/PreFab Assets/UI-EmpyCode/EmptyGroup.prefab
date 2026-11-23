@@ -1520,7 +1520,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ScoreSystem
   scoreText: {fileID: 6859453400172538960}
-  baseScore: 1000
+  baseScore: 100000
   parTime: 60
   pointsPerSecondUnderPar: 10
   pointsLostPerFall: 150
