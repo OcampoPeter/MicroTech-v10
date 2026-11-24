@@ -1,208 +1,172 @@
-// ============================================================
-// WHERE TO PUT THIS FILE:
-//   Map-Code/Assets Task/Shared/ObjectivesUI.cs
-//   REPLACE the old ObjectivesUI.cs (don't keep 2 copies).
-//
-// WHAT IT DOES:
-//   Quest list: "Bent  1 / 3", "Missing  0 / 2", "Fried  0 / 1".
-//   A row turns green + says DONE when all of that type are fixed.
-//   A row is hidden if the map has 0 of that type.
-//   NEW: when EVERYTHING is fixed, the task rows vanish and
-//        the panel shows "Find the Exit".
-//
-// WORKS WITH BOTH kinds of text:
-//   - TextMeshPro text
-//   - normal (legacy) UI > Text
-//
-// SETUP: put this on your Panel. The 4 text objects are found
-//   automatically by NAME (title, Bent, Missing, Fried).
-//   The "Find the Exit" line is made automatically (no extra setup).
-// ============================================================
+using UnityEngine; // Unity basics
+using UnityEngine.UI; // lets us use the old UI Text
+using UnityEngine.Events; // lets us use UnityEvent
+using TMPro; // lets us use TextMeshPro
 
-using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.Events;
-using TMPro;
+public enum ObjectiveType { Bent, Missing, Fried } // the 3 kinds of tasks
 
-// Named ObjectiveType so it won't clash with your future damage enum.
-public enum ObjectiveType { Bent, Missing, Fried }
-
-public class ObjectivesUI : MonoBehaviour
+public class ObjectivesUI : MonoBehaviour // shows the task list on screen
 {
-    // Easy access from other scripts: ObjectivesUI.Instance
-    public static ObjectivesUI Instance;
+    public static ObjectivesUI Instance; // easy access from other scripts
 
-    [Header("Text rows (auto-found by name if left empty)")]
-    public GameObject titleText;
-    public GameObject bentText;
-    public GameObject missingText;
-    public GameObject friedText;
+    [Header("Text rows (auto-found by name if left empty)")] // Inspector title
+    public GameObject titleText; // the title row
+    public GameObject bentText; // the Bent row
+    public GameObject missingText; // the Missing row
+    public GameObject friedText; // the Fried row
 
-    [Header("Find the Exit line (made automatically if empty)")]
-    public GameObject exitText;
-    public string exitMessage = "Find the Exit";
-    public Color exitColor = new Color(1f, 0.9f, 0.3f);
+    [Header("Find the Exit line (made automatically if empty)")] // Inspector title
+    public GameObject exitText; // the "Find the Exit" row
+    public string exitMessage = "Find the Exit"; // the words shown at the end
+    public Color exitColor = new Color(1f, 0.9f, 0.3f); // color of the exit message
 
-    [Header("Panel (leave EMPTY if this script is ON the panel)")]
-    public GameObject panel;
+    [Header("Panel (leave EMPTY if this script is ON the panel)")] // Inspector title
+    public GameObject panel; // the whole panel
 
-    [Header("Look")]
-    public string title = "OBJECTIVES";
-    public Color pendingColor = Color.white;
-    public Color doneColor = new Color(0.2f, 1f, 0.4f);
+    [Header("Look")] // Inspector title
+    public string title = "OBJECTIVES"; // the title words
+    public Color pendingColor = Color.white; // color for tasks not done
+    public Color doneColor = new Color(0.2f, 1f, 0.4f); // color for tasks done
 
-    [Header("Event")]
-    public UnityEvent onAllComplete;   // optional: open a door, play a sound...
+    [Header("Event")] // Inspector title
+    public UnityEvent onAllComplete; // runs when everything is fixed
 
-    // [0] = Bent, [1] = Missing, [2] = Fried
-    int[] total = new int[3];
-    int[] fixedCount = new int[3];
-    bool allDone;
+    int[] total = new int[3]; // how many tasks of each type
+    int[] fixedCount = new int[3]; // how many are fixed of each type
+    bool allDone; // true once everything is fixed
 
-    void Awake()
+    void Awake() // runs when the object loads
     {
-        Instance = this;
+        Instance = this; // save this script for easy access
 
-        // Find the text objects by name if slots are empty
-        if (titleText == null) titleText = FindChildByName("title");
-        if (bentText == null) bentText = FindChildByName("Bent");
-        if (missingText == null) missingText = FindChildByName("Missing");
-        if (friedText == null) friedText = FindChildByName("Fried");
+        if (titleText == null) titleText = FindChildByName("title"); // find the title row by name
+        if (bentText == null) bentText = FindChildByName("Bent"); // find the Bent row by name
+        if (missingText == null) missingText = FindChildByName("Missing"); // find the Missing row by name
+        if (friedText == null) friedText = FindChildByName("Fried"); // find the Fried row by name
 
-        // Make the "Find the Exit" line by copying the Bent row (same font and size)
-        if (exitText == null && bentText != null)
+        if (exitText == null && bentText != null) // no exit row yet
         {
-            exitText = Instantiate(bentText, bentText.transform.parent);
-            exitText.name = "ExitRow";
+            exitText = Instantiate(bentText, bentText.transform.parent); // copy the Bent row
+            exitText.name = "ExitRow"; // name the copy
         }
-        if (exitText != null) exitText.SetActive(false);
+        if (exitText != null) exitText.SetActive(false); // hide the exit row at the start
     }
 
-    // Looks through all children for an object with this name
-    GameObject FindChildByName(string objName)
+    GameObject FindChildByName(string objName) // finds a child object by its name
     {
-        Transform[] all = GetComponentsInChildren<Transform>(true);
-        foreach (Transform t in all)
+        Transform[] all = GetComponentsInChildren<Transform>(true); // get all children
+        foreach (Transform t in all) // go through each child
         {
-            if (t == transform) continue;
-            if (t.gameObject.name.ToLower() == objName.ToLower()) return t.gameObject;
+            if (t == transform) continue; // skip this object itself
+            if (t.gameObject.name.ToLower() == objName.ToLower()) return t.gameObject; // return it if the name matches
         }
-        return null;
+        return null; // nothing found
     }
 
-    // Sets text + color on either TextMeshPro or legacy Text
-    void SetLabel(GameObject obj, string message, Color color)
+    void SetLabel(GameObject obj, string message, Color color) // sets the words and color of a row
     {
-        if (obj == null) return;
+        if (obj == null) return; // no object, do nothing
 
-        TMP_Text tmp = obj.GetComponent<TMP_Text>();
-        if (tmp != null)
+        TMP_Text tmp = obj.GetComponent<TMP_Text>(); // try to get a TextMeshPro text
+        if (tmp != null) // it is TextMeshPro
         {
-            tmp.text = message;
-            tmp.color = color;
-            return;
+            tmp.text = message; // set the words
+            tmp.color = color; // set the color
+            return; // done
         }
 
-        Text legacy = obj.GetComponent<Text>();
-        if (legacy != null)
+        Text legacy = obj.GetComponent<Text>(); // try to get an old UI Text
+        if (legacy != null) // it is an old Text
         {
-            legacy.text = message;
-            legacy.color = color;
-            return;
+            legacy.text = message; // set the words
+            legacy.color = color; // set the color
+            return; // done
         }
 
-        Debug.LogWarning("[ObjectivesUI] '" + obj.name + "' has no Text component!");
+        Debug.LogWarning("[ObjectivesUI] '" + obj.name + "' has no Text component!"); // warn that there is no text
     }
 
-    // ---- CALL THIS ONCE when the controller knows the counts ----
-    public void SetTotals(int bent, int missing, int fried)
+    public void SetTotals(int bent, int missing, int fried) // sets how many tasks there are
     {
-        total[0] = bent;
-        total[1] = missing;
-        total[2] = fried;
-        fixedCount = new int[3];
-        allDone = false;
-        Refresh();
+        total[0] = bent; // total Bent tasks
+        total[1] = missing; // total Missing tasks
+        total[2] = fried; // total Fried tasks
+        fixedCount = new int[3]; // reset the fixed counts
+        allDone = false; // nothing is done yet
+        Refresh(); // update the screen
     }
 
-    // ---- CALL THIS each time ONE task is fixed ----
-    public void ReportFixed(ObjectiveType type)
+    public void ReportFixed(ObjectiveType type) // call this when one task is fixed
     {
-        int i = (int)type;
-        if (fixedCount[i] < total[i]) fixedCount[i]++;   // can't go over the total
-        Refresh();
+        int i = (int)type; // turn the type into a number
+        if (fixedCount[i] < total[i]) fixedCount[i]++; // add one fixed, but never over the total
+        Refresh(); // update the screen
     }
 
-    // ---- CALL THIS if a task goes back to broken (optional) ----
-    public void ReportUnfixed(ObjectiveType type)
+    public void ReportUnfixed(ObjectiveType type) // call this if a task breaks again
     {
-        int i = (int)type;
-        if (fixedCount[i] > 0) fixedCount[i]--;
-        Refresh();
+        int i = (int)type; // turn the type into a number
+        if (fixedCount[i] > 0) fixedCount[i]--; // remove one fixed, but never below zero
+        Refresh(); // update the screen
     }
 
-    void Refresh()
+    void Refresh() // updates everything shown on screen
     {
-        int all = total[0] + total[1] + total[2];
+        int all = total[0] + total[1] + total[2]; // the total number of tasks
 
-        // Is everything fixed?
-        bool complete = all > 0 && fixedCount[0] == total[0]
-                                && fixedCount[1] == total[1]
-                                && fixedCount[2] == total[2];
+        bool complete = all > 0 && fixedCount[0] == total[0] // true if everything is fixed
+                                && fixedCount[1] == total[1] // Missing tasks all fixed
+                                && fixedCount[2] == total[2]; // Fried tasks all fixed
 
-        if (titleText != null)
+        if (titleText != null) // there is a title row
         {
-            titleText.SetActive(true);
-            SetLabel(titleText, title, pendingColor);
+            titleText.SetActive(true); // show it
+            SetLabel(titleText, title, pendingColor); // set its words
         }
 
-        if (complete)
+        if (complete) // everything is fixed
         {
-            // Task rows vanish, "Find the Exit" appears
-            if (bentText != null) bentText.SetActive(false);
-            if (missingText != null) missingText.SetActive(false);
-            if (friedText != null) friedText.SetActive(false);
+            if (bentText != null) bentText.SetActive(false); // hide the Bent row
+            if (missingText != null) missingText.SetActive(false); // hide the Missing row
+            if (friedText != null) friedText.SetActive(false); // hide the Fried row
 
-            if (exitText != null)
+            if (exitText != null) // there is an exit row
             {
-                exitText.SetActive(true);
-                SetLabel(exitText, exitMessage, exitColor);
+                exitText.SetActive(true); // show it
+                SetLabel(exitText, exitMessage, exitColor); // set its words and color
             }
         }
-        else
+        else // not everything is fixed
         {
-            if (exitText != null) exitText.SetActive(false);
+            if (exitText != null) exitText.SetActive(false); // hide the exit row
 
-            SetRow(bentText, "Bent", 0);
-            SetRow(missingText, "Missing", 1);
-            SetRow(friedText, "Fried", 2);
+            SetRow(bentText, "Bent", 0); // update the Bent row
+            SetRow(missingText, "Missing", 1); // update the Missing row
+            SetRow(friedText, "Fried", 2); // update the Fried row
         }
 
-        // Hide the whole panel if no tasks (skipped if script is ON the panel)
-        if (panel != null && panel != gameObject) panel.SetActive(all > 0);
+        if (panel != null && panel != gameObject) panel.SetActive(all > 0); // hide the panel if there are no tasks
 
-        // Fire the event only once, when everything is fixed
-        if (complete && !allDone)
+        if (complete && !allDone) // just finished everything
         {
-            allDone = true;
-            onAllComplete.Invoke();
+            allDone = true; // remember it is done
+            onAllComplete.Invoke(); // run the event once
         }
-        else if (!complete)
+        else if (!complete) // not finished
         {
-            allDone = false;
+            allDone = false; // reset the flag
         }
     }
 
-    void SetRow(GameObject row, string label, int i)
+    void SetRow(GameObject row, string label, int i) // updates one task row
     {
-        if (row == null) return;
+        if (row == null) return; // no row, do nothing
 
-        // Hide the row if this map has none of this type
-        row.SetActive(total[i] > 0);
-        if (total[i] == 0) return;
+        row.SetActive(total[i] > 0); // hide the row if this type has no tasks
+        if (total[i] == 0) return; // stop if there are none
 
-        bool done = fixedCount[i] >= total[i];
-        string message = label + "  " + fixedCount[i] + " / " + total[i] + (done ? "  DONE" : "");
-        SetLabel(row, message, done ? doneColor : pendingColor);
+        bool done = fixedCount[i] >= total[i]; // true if all of this type are fixed
+        string message = label + "  " + fixedCount[i] + " / " + total[i] + (done ? "  DONE" : ""); // build the row words
+        SetLabel(row, message, done ? doneColor : pendingColor); // show it in green if done
     }
 }

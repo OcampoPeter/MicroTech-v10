@@ -1,70 +1,47 @@
-// WHERE TO PUT THIS FILE:  Assets Task / Shared
-// ------------------------------------------------------------
-using System;
-using UnityEngine;
+using System; // Gives access to Action
+using UnityEngine; // Gives access to Unity classes like MonoBehaviour, Collider, Debug
 
-// Goes on a task platform (BentPlatform, DarkPlatform and PowerNode add it automatically).
-// It tells the task script when the player LANDS on this platform.
-//
-// How it works: the player carries a PlayerStepReporter (added automatically). The reporter
-// sees which collider the player is standing on. If that collider belongs to this platform
-// (the platform itself OR a model/collider placed inside it, like a bent model),
-// the reporter calls Report() and the task script gets onPlayerStep.
-// How a platform decides that the player "stepped" on it.
-public enum StepMode
+public enum StepMode // How a platform decides that the player "stepped" on it
 {
-    JumpOnIt,   // only a jump made while standing on it counts (used by Bent)
-    StepOnIt,   // getting onto it counts: walking or jumping onto it (used by Fried)
-    StandOnIt   // just standing on it counts, no jump or movement needed (used by Missing)
+    JumpOnIt, // Only a jump made while standing on it counts (used by Bent)
+    StepOnIt, // Getting onto it counts, by walking or jumping (used by Fried)
+    StandOnIt // Just standing on it counts (used by Missing)
 }
 
-public class StepTrigger : MonoBehaviour
+public class StepTrigger : MonoBehaviour // Goes on a task platform and tells when the player lands on it
 {
-    // Which kind of step counts on this platform. Set by the task script (Bent, Fried...).
-    public StepMode mode = StepMode.JumpOnIt;
+    public StepMode mode = StepMode.JumpOnIt; // Which kind of step counts on this platform
 
-    // Fired each time the player lands on this platform.
-    public event Action onPlayerStep;
+    public event Action onPlayerStep; // Fires each time the player lands on this platform
 
-    // After a hit, ignore new landings on this platform for this many seconds.
-    // This stops one jump from counting twice (for example when the platform changes
-    // shape and the player drops a little onto the new, lower model).
-    public float cooldown = 0.8f;
-    float lastHitTime = -999f;   // when the last hit was counted
+    public float cooldown = 0.8f; // Seconds to ignore new landings after a hit
+    float lastHitTime = -999f; // When the last hit was counted
 
-    // DEBUG: prints a message in the Console on every landing.
-    // Untick this in the Inspector once everything works.
-    public bool debugLog = true;
+    public bool debugLog = true; // True = print a message in the Console on every landing
 
-    // Adds a StepTrigger to the platform (or returns the one it already has).
-    // The second value is not used anymore; it is kept so older scripts still compile.
-    public static StepTrigger Create(GameObject platform, float worldHeight = 0.3f)
+    public static StepTrigger Create(GameObject platform, float worldHeight = 0.3f) // Adds a StepTrigger to a platform, or returns the one it has
     {
-        var step = platform.GetComponent<StepTrigger>();
-        if (step == null) step = platform.AddComponent<StepTrigger>();
+        var step = platform.GetComponent<StepTrigger>(); // Look for an existing StepTrigger
+        if (step == null) step = platform.AddComponent<StepTrigger>(); // Add one if there is none
 
-        // Make sure the player can report landings.
-        PlayerStepReporter.EnsureAttached();
-        return step;
+        PlayerStepReporter.EnsureAttached(); // Make sure the player can report landings
+        return step; // Give back the StepTrigger
     }
 
-    // Called by PlayerStepReporter when the player lands on this platform.
-    public void Report(Collider surface)
+    public void Report(Collider surface) // Called by PlayerStepReporter when the player lands here
     {
-        // Too soon after the last hit: ignore it.
-        if (Time.time - lastHitTime < cooldown) return;
-        lastHitTime = Time.time;
+        if (Time.time - lastHitTime < cooldown) return; // Too soon after the last hit, so ignore it
+        lastHitTime = Time.time; // Remember when this hit happened
 
-        if (debugLog)
-            Debug.Log($"[StepTrigger] player landed on '{name}' (collider: '{surface.name}')", this);
+        if (debugLog) // If debug messages are on
+            Debug.Log($"[StepTrigger] player landed on '{name}' (collider: '{surface.name}')", this); // Print which platform and collider were hit
 
-        onPlayerStep?.Invoke();
+        onPlayerStep?.Invoke(); // Tell the task script that the player stepped
     }
 
-    // If the player is created later than the platform, keep looking for it.
-    void Update()
+    void Update() // Runs every frame
     {
-        if (PlayerStepReporter.Current == null)
-            PlayerStepReporter.EnsureAttached();
+        if (PlayerStepReporter.Current == null) // If the player has no reporter yet
+            PlayerStepReporter.EnsureAttached(); // Keep trying to attach one
     }
 }

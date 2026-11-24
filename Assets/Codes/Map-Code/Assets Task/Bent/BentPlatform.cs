@@ -1,217 +1,179 @@
-// WHERE TO PUT THIS FILE:  Assets Task / Bent
-// ------------------------------------------------------------
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+using System.Collections; // Gives access to IEnumerator for coroutines
+using System.Collections.Generic; // Gives access to List
+using UnityEngine; // Gives access to Unity classes like MonoBehaviour, Color, Renderer
 
-// BENT platform: it starts damaged. Each time the player lands on it, it gets less bent,
-// until it is fixed and shows the normal platform.
-// You don't add this yourself: set a platform's Layer to "Bent" and MazeTaskController adds it.
-//
-// Two ways to show it as "bent":
-//   1) Bent Stages set on the controller (e.g. VeryBent, Bent, ABitBent):
-//      starts on the first model, each landing moves to the next one,
-//      the landing after the last model swaps back to the normal platform.
-//      So the number of landings needed = the number of models.
-//   2) No Bent Stages: the platform tilts and changes color, then straightens when fixed.
-public class BentPlatform : MonoBehaviour
+public class BentPlatform : MonoBehaviour // A platform that starts bent and gets fixed by landing on it
 {
-    // The colors are set on the MazeTaskController (NOT here), because this script is added
-    // while the game runs, so anything changed on it in the Inspector is lost when you stop.
-    Color bentColor;              // color of the most bent look
-    Color fixedColor;             // color of the fixed platform
-    bool tintModels;              // true = color the bent models too
-    bool tintFixed;              // true = color the platform after it is fixed
-    float glow;                   // how much the colors glow (neon). 0 = no glow
-    bool blendWhileBent;          // true = color shifts toward "fixed" with each hit
-    public float straightenTime = 0.5f;
+    Color bentColor; // Color of the most bent look
+    Color fixedColor; // Color of the fixed platform
+    bool tintModels; // True = color the bent models too
+    bool tintFixed; // True = color the platform after it is fixed
+    float glow; // How much the colors glow (0 = no glow)
+    bool blendWhileBent; // True = color shifts toward "fixed" with each hit
+    public float straightenTime = 0.5f; // Seconds it takes to straighten when fixed
 
-    public bool IsFixed { get; private set; }
-    public int JumpCount { get; private set; }
+    public bool IsFixed { get; private set; } // True once the platform is fixed
+    public int JumpCount { get; private set; } // How many landings were counted so far
 
-    MazeTaskGroup group;          // the task this platform belongs to
-    int jumpsToFix = 3;           // landings needed to fix it
-    Renderer[] ownRenderers;      // the platform's normal look (what it looks like when fixed)
-    Collider[] ownColliders;      // the platform's normal collision
-    List<GameObject> stages;      // the bent models, most bent first
-    GameObject bentVisual;        // the bent model being shown right now
-    bool hasModel;                // true if we are using bent models
-    bool keepsOwnSize;            // true = model keeps the size it was made at
-    Quaternion fixedRotation;     // the rotation it has when fixed
-    Bounds platformBounds;        // the platform's size (width and depth) before any model
-    float fadeTime;               // seconds a color change takes (a smooth fade)
-    Color currentColor;           // the color the platform has right now
+    MazeTaskGroup group; // The task this platform belongs to
+    int jumpsToFix = 3; // Landings needed to fix it
+    Renderer[] ownRenderers; // The platform's normal look
+    Collider[] ownColliders; // The platform's normal collision
+    List<GameObject> stages; // The bent models, most bent first
+    GameObject bentVisual; // The bent model being shown right now
+    bool hasModel; // True if we are using bent models
+    bool keepsOwnSize; // True = model keeps the size it was made at
+    Quaternion fixedRotation; // The rotation it has when fixed
+    Bounds platformBounds; // The platform's size before any model
+    float fadeTime; // Seconds a color change takes
+    Color currentColor; // The color the platform has right now
 
-    // Called by MazeTaskController to set this platform up.
-    public void Init(MazeTaskGroup taskGroup, int jumps, Vector3 tilt,
-                     GameObject[] bentStages, bool modelKeepsOwnSize, float hitCooldown,
-                     Color bentCol, Color fixedCol, bool colorModels, bool colorFixed,
-                     float glowAmount, bool blendColors, float colorFadeTime)
+    public void Init(MazeTaskGroup taskGroup, int jumps, Vector3 tilt, // Sets this platform up (called by MazeTaskController)
+                     GameObject[] bentStages, bool modelKeepsOwnSize, float hitCooldown, // More setup values
+                     Color bentCol, Color fixedCol, bool colorModels, bool colorFixed, // Colors and color options
+                     float glowAmount, bool blendColors, float colorFadeTime) // Glow and fade options
     {
-        group = taskGroup;
-        bentColor = bentCol;
-        fixedColor = fixedCol;
-        tintModels = colorModels;
-        tintFixed = colorFixed;
-        glow = glowAmount;
-        blendWhileBent = blendColors;
-        fadeTime = colorFadeTime;
-        currentColor = bentColor;
-        ownRenderers = GetComponentsInChildren<Renderer>();
-        ownColliders = GetComponents<Collider>();
-        keepsOwnSize = modelKeepsOwnSize;
-        platformBounds = TaskVisuals.GetBounds(ownRenderers, ownColliders); // remember the platform's size
+        group = taskGroup; // Remember the task group
+        bentColor = bentCol; // Save the bent color
+        fixedColor = fixedCol; // Save the fixed color
+        tintModels = colorModels; // Save if models get colored
+        tintFixed = colorFixed; // Save if the fixed platform gets colored
+        glow = glowAmount; // Save the glow amount
+        blendWhileBent = blendColors; // Save if colors blend with each hit
+        fadeTime = colorFadeTime; // Save the fade time
+        currentColor = bentColor; // The platform starts with the bent color
+        ownRenderers = GetComponentsInChildren<Renderer>(); // Find all renderers on this platform
+        ownColliders = GetComponents<Collider>(); // Find all colliders on this platform
+        keepsOwnSize = modelKeepsOwnSize; // Save if models keep their own size
+        platformBounds = TaskVisuals.GetBounds(ownRenderers, ownColliders); // Remember the platform's size
 
-        // Collect the stage models, skipping any empty slots.
-        stages = new List<GameObject>();
-        if (bentStages != null)
-            foreach (var m in bentStages)
-                if (m != null) stages.Add(m);
+        stages = new List<GameObject>(); // Make an empty list for the models
+        if (bentStages != null) // If any models were given
+            foreach (var m in bentStages) // Go through each model slot
+                if (m != null) stages.Add(m); // Add it only if the slot is not empty
 
-        hasModel = stages.Count > 0;
+        hasModel = stages.Count > 0; // We use models only if there is at least one
 
-        // With models: one landing per model. Without: use the number from the controller.
-        jumpsToFix = hasModel ? stages.Count : Mathf.Max(1, jumps);
+        jumpsToFix = hasModel ? stages.Count : Mathf.Max(1, jumps); // One landing per model, or the number from the controller
 
-        // Make the sensor that counts landings (before any tilt, so it sits flat on top).
-        var step = StepTrigger.Create(gameObject);
-        step.cooldown = hitCooldown;   // wait this long between counted hits
-        step.onPlayerStep += OnStep;
+        var step = StepTrigger.Create(gameObject); // Make the sensor that counts landings
+        step.cooldown = hitCooldown; // Wait this long between counted hits
+        step.onPlayerStep += OnStep; // Call OnStep every time the player lands
 
-        fixedRotation = transform.localRotation;
+        fixedRotation = transform.localRotation; // Remember the flat rotation
 
-        if (hasModel)
+        if (hasModel) // If we use bent models
         {
-            // Hide the normal platform look and show the first (most bent) model.
-            foreach (var r in ownRenderers) r.enabled = false;
-            ShowStage(0);
+            foreach (var r in ownRenderers) r.enabled = false; // Hide the normal platform look
+            ShowStage(0); // Show the most bent model
         }
-        else
+        else // No models
         {
-            // No models: tilt the platform and color it as "bent".
-            transform.localRotation = fixedRotation * Quaternion.Euler(tilt);
-            Tint(ownRenderers, bentColor);
+            transform.localRotation = fixedRotation * Quaternion.Euler(tilt); // Tilt the platform
+            Tint(ownRenderers, bentColor); // Color it as bent
         }
 
-        group.Register(this);
+        group.Register(this); // Tell the task group this platform exists
     }
 
-    // Show one of the bent models (replacing the one shown before).
-    void ShowStage(int index)
+    void ShowStage(int index) // Shows one of the bent models
     {
-        if (bentVisual != null) Destroy(bentVisual);
+        if (bentVisual != null) Destroy(bentVisual); // Remove the model shown before
 
-        GameObject model = stages[index];
-        bentVisual = Instantiate(model, transform);
-        bentVisual.name = "BentModel_" + index;
-        bentVisual.transform.localPosition = Vector3.zero;
-        bentVisual.transform.localRotation = Quaternion.identity;
+        GameObject model = stages[index]; // Get the model for this stage
+        bentVisual = Instantiate(model, transform); // Create it as a child of the platform
+        bentVisual.name = "BentModel_" + index; // Give it a clear name
+        bentVisual.transform.localPosition = Vector3.zero; // Put it in the middle of the platform
+        bentVisual.transform.localRotation = Quaternion.identity; // No extra rotation
 
-        // Size the model. Keep Own Size ON: the model keeps the size it was made at.
-        // OFF: the model is resized to fit the platform's width and depth.
-        float fit = keepsOwnSize ? 1f : TaskVisuals.FitFactor(model, platformBounds);
+        float fit = keepsOwnSize ? 1f : TaskVisuals.FitFactor(model, platformBounds); // Keep its size, or resize it to fit the platform
 
-        // Cancel the platform's own scale so only the size we chose is applied.
-        Vector3 s = transform.lossyScale;
-        Vector3 inverse = new Vector3(Safe(1f / s.x), Safe(1f / s.y), Safe(1f / s.z));
-        bentVisual.transform.localScale = Vector3.Scale(model.transform.localScale * fit, inverse);
+        Vector3 s = transform.lossyScale; // The platform's real scale
+        Vector3 inverse = new Vector3(Safe(1f / s.x), Safe(1f / s.y), Safe(1f / s.z)); // The opposite scale, to cancel it out
+        bentVisual.transform.localScale = Vector3.Scale(model.transform.localScale * fit, inverse); // Apply only the size we chose
 
-        // Color the model: the first model is the "bent" color. With blending on, each later
-        // model fades a step closer to the "fixed" color (slowly, over the fade time).
-        if (tintModels)
+        if (tintModels) // If models should be colored
         {
-            Color target = blendWhileBent ? Color.Lerp(bentColor, fixedColor, (float)index / jumpsToFix) : bentColor;
-            Renderer[] modelRenderers = bentVisual.GetComponentsInChildren<Renderer>();
+            Color target = blendWhileBent ? Color.Lerp(bentColor, fixedColor, (float)index / jumpsToFix) : bentColor; // Pick the color for this stage
+            Renderer[] modelRenderers = bentVisual.GetComponentsInChildren<Renderer>(); // Find the model's renderers
 
-            if (index == 0) Tint(modelRenderers, target);                                    // first one: no fade
-            else StartCoroutine(FadeColor(modelRenderers, currentColor, target));            // later ones: fade
-            currentColor = target;
+            if (index == 0) Tint(modelRenderers, target); // First model: set the color right away
+            else StartCoroutine(FadeColor(modelRenderers, currentColor, target)); // Later models: fade to the new color
+            currentColor = target; // Remember the current color
         }
 
-        // If this model has its own collision, use it instead of the platform's normal one.
-        bool modelHasCollider = bentVisual.GetComponentInChildren<Collider>() != null;
-        foreach (var c in ownColliders) c.enabled = !modelHasCollider;
+        bool modelHasCollider = bentVisual.GetComponentInChildren<Collider>() != null; // Check if the model has its own collision
+        foreach (var c in ownColliders) c.enabled = !modelHasCollider; // Use the model's collision instead of the platform's
     }
 
-    // Runs every time the player lands on the platform.
-    void OnStep()
+    void OnStep() // Runs every time the player lands on the platform
     {
-        if (IsFixed) return;
+        if (IsFixed) return; // Already fixed, so do nothing
 
-        JumpCount++;
+        JumpCount++; // Count this landing
 
-        if (JumpCount >= jumpsToFix)
+        if (JumpCount >= jumpsToFix) // Enough landings
         {
-            Fix();
+            Fix(); // Fix the platform
         }
-        else if (hasModel)
+        else if (hasModel) // Not done yet and we use models
         {
-            // Move to the next, less bent model.
-            ShowStage(JumpCount);
+            ShowStage(JumpCount); // Show the next, less bent model
         }
-        else if (blendWhileBent)
+        else if (blendWhileBent) // Not done yet, no models, and blending is on
         {
-            // No models: shift the color a bit closer to "fixed" (only if blending is on).
-            Color target = Color.Lerp(bentColor, fixedColor, (float)JumpCount / jumpsToFix);
-            StartCoroutine(FadeColor(ownRenderers, currentColor, target));
-            currentColor = target;
+            Color target = Color.Lerp(bentColor, fixedColor, (float)JumpCount / jumpsToFix); // Color a bit closer to fixed
+            StartCoroutine(FadeColor(ownRenderers, currentColor, target)); // Fade to that color
+            currentColor = target; // Remember the current color
         }
     }
 
-    // The platform is repaired: swap back to the normal look.
-    void Fix()
+    void Fix() // The platform is repaired
     {
-        IsFixed = true;
+        IsFixed = true; // Mark it as fixed
 
-        if (hasModel)
+        if (hasModel) // If we used bent models
         {
-            // Remove the bent model and bring back the normal platform and collision.
-            if (bentVisual != null) Destroy(bentVisual);
-            foreach (var r in ownRenderers) r.enabled = true;
-            foreach (var c in ownColliders) c.enabled = true;
+            if (bentVisual != null) Destroy(bentVisual); // Remove the bent model
+            foreach (var r in ownRenderers) r.enabled = true; // Bring back the normal look
+            foreach (var c in ownColliders) c.enabled = true; // Bring back the normal collision
 
-            // Color the normal platform with the "fixed" color (if turned on).
-            // It fades slowly from the last bent color to the fixed color.
-            if (tintFixed) StartCoroutine(FadeColor(ownRenderers, currentColor, fixedColor));
+            if (tintFixed) StartCoroutine(FadeColor(ownRenderers, currentColor, fixedColor)); // Fade to the fixed color if turned on
         }
-        else
+        else // No models
         {
-            StartCoroutine(Straighten());
-            StartCoroutine(FadeColor(ownRenderers, currentColor, fixedColor));
+            StartCoroutine(Straighten()); // Rotate the platform back to flat
+            StartCoroutine(FadeColor(ownRenderers, currentColor, fixedColor)); // Fade to the fixed color
         }
 
-        group.MarkComplete(this);
+        group.MarkComplete(this); // Tell the task group this platform is done
     }
 
-    // Smoothly rotate the tilted platform back to flat.
-    IEnumerator Straighten()
+    IEnumerator Straighten() // Smoothly rotates the platform back to flat
     {
-        Quaternion start = transform.localRotation;
-        for (float t = 0f; t < 1f; t += Time.deltaTime / Mathf.Max(0.01f, straightenTime))
+        Quaternion start = transform.localRotation; // The tilted rotation we start from
+        for (float t = 0f; t < 1f; t += Time.deltaTime / Mathf.Max(0.01f, straightenTime)) // Go from 0 to 1 over the straighten time
         {
-            transform.localRotation = Quaternion.Slerp(start, fixedRotation, t);
-            yield return null;
+            transform.localRotation = Quaternion.Slerp(start, fixedRotation, t); // Rotate a bit closer to flat
+            yield return null; // Wait one frame
         }
-        transform.localRotation = fixedRotation;
+        transform.localRotation = fixedRotation; // Make sure it ends perfectly flat
     }
 
-    // Slowly change the color of some renderers from one color to another.
-    IEnumerator FadeColor(Renderer[] targets, Color from, Color to)
+    IEnumerator FadeColor(Renderer[] targets, Color from, Color to) // Slowly changes color from one to another
     {
-        for (float t = 0f; t < 1f; t += Time.deltaTime / Mathf.Max(0.01f, fadeTime))
+        for (float t = 0f; t < 1f; t += Time.deltaTime / Mathf.Max(0.01f, fadeTime)) // Go from 0 to 1 over the fade time
         {
-            Tint(targets, Color.Lerp(from, to, t));
-            yield return null;
+            Tint(targets, Color.Lerp(from, to, t)); // Set a color between the two
+            yield return null; // Wait one frame
         }
-        Tint(targets, to);
+        Tint(targets, to); // Make sure it ends on the final color
     }
 
-    // Color every renderer in the list.
-    void Tint(Renderer[] renderers, Color color)
+    void Tint(Renderer[] renderers, Color color) // Colors every renderer in the list
     {
-        foreach (var r in renderers) TaskVisuals.SetColor(r, color, glow); // glow makes it neon
+        foreach (var r in renderers) TaskVisuals.SetColor(r, color, glow); // Set the color with the glow amount
     }
 
-    // Avoid infinity if a scale value is 0.
-    float Safe(float v) => float.IsInfinity(v) || float.IsNaN(v) ? 1f : v;
+    float Safe(float v) => float.IsInfinity(v) || float.IsNaN(v) ? 1f : v; // Returns 1 if the value is infinity or not a number
 }

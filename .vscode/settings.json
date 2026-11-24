@@ -67,5 +67,5 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "MicroTech-Feature-Peter-.slnx"
+    "dotnet.defaultSolution": "MicroTech-v10.slnx"
 }

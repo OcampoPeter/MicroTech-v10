@@ -5,6 +5,9 @@ using UnityEngine.SceneManagement;
 [RequireComponent(typeof(Grabbable))]
 public class MapPortal : MonoBehaviour
 {
+    [Header("Part list (drag your PartCatalog here)")]
+    public PartCatalog catalog;
+
     [Header("Where this item sends you")]
     [Tooltip("The exact name of the scene, for example Maze. It must be in File > Build > Scene List.")]
     public string sceneToLoad = "Maze";
@@ -25,10 +28,25 @@ public class MapPortal : MonoBehaviour
     private PartState part; // optional: tells us if this part is already fixed
     private bool loading;
 
+    void OnEnable()
+    {
+        loading = false;
+    }
+
     void Start()
     {
         grabbable = GetComponent<Grabbable>();
         part = GetComponent<PartState>();
+
+        if (catalog != null && part != null)
+        {
+            PartEntry entry = catalog.Find(part.partId);
+            if (entry != null && !string.IsNullOrEmpty(entry.sceneName))
+            {
+                sceneToLoad = entry.sceneName;
+                part.difficulty = entry.difficulty;
+            }
+        }
     }
 
     void Update()
@@ -69,6 +87,10 @@ public class MapPortal : MonoBehaviour
         Debug.Log("Going to map: " + sceneToLoad);
 
         yield return new WaitForSeconds(loadDelay);
-        SceneManager.LoadScene(sceneToLoad);
+
+        if (MazeLoader.Instance != null)
+            MazeLoader.Instance.LoadMaze(sceneToLoad, gameObject.scene);
+        else
+            SceneManager.LoadScene(sceneToLoad);
     }
 }

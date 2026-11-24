@@ -1,44 +1,43 @@
-using UnityEngine;
-using TMPro;
+using UnityEngine; // Unity basics
+using TMPro; // lets us use TextMeshPro
 
-public class CorruptionSystem : MonoBehaviour
+public class CorruptionSystem : MonoBehaviour // tracks how corrupted the game is
 {
-    public static CorruptionSystem Instance;
+    public static CorruptionSystem Instance; // easy access from other scripts
 
-    [Header("UI")]
-    public TMP_Text corruptionText;
+    [Header("UI")] // Inspector title
+    public TMP_Text corruptionText; // the text that shows corruption
 
-    [Header("Settings")]
-    public float maxCorruption = 100f;
+    [Header("Settings")] // Inspector title
+    public float maxCorruption = 100f; // corruption level that crashes the game
 
-    public float Corruption { get; private set; }
-    public bool IsCrashed { get; private set; }
+    public float Corruption { get; private set; } // the current corruption
+    public bool IsCrashed { get; private set; } // true after the game crashed
 
-    void Awake() { Instance = this; }
+    void Awake() { Instance = this; } // save this script for easy access
 
-    void Start() { UpdateText(); }
+    void Start() { UpdateText(); } // show the starting text
 
-    public void AddCorruption(float amount)
+    public void AddCorruption(float amount) // adds corruption
     {
-        if (IsCrashed) return;
+        if (IsCrashed) return; // do nothing if already crashed
 
-        Corruption = Mathf.Min(maxCorruption, Corruption + amount);
-        UpdateText();
+        Corruption = Mathf.Min(maxCorruption, Corruption + amount); // add it but never go over the max
+        UpdateText(); // update the text
 
-        if (Corruption >= maxCorruption) Crash();
+        if (Corruption >= maxCorruption) Crash(); // crash when it reaches the max
     }
 
-    void Crash()
+    void Crash() // crashes the game
     {
-        IsCrashed = true;
-        // The Game Manager shows the blue screen and freezes the game
-        if (GameManager.Instance != null)
-            GameManager.Instance.SetState(GameState.Crashed);
+        IsCrashed = true; // remember it crashed
+        if (GameManager.Instance != null) // if there is a Game Manager
+            GameManager.Instance.SetState(GameState.Crashed); // tell it to show the crash screen
     }
 
-    void UpdateText()
+    void UpdateText() // updates the text on screen
     {
-        if (corruptionText != null)
-            corruptionText.text = "CORRUPTION " + Corruption.ToString("F0") + "%";
+        if (corruptionText != null) // if there is a text
+            corruptionText.text = "CORRUPTION " + Corruption.ToString("F0") + "%"; // show corruption as a percent
     }
 }
