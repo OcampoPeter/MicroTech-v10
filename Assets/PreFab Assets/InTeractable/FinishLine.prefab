@@ -125,3 +125,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ec7fd04ad334bc74aa86aad0132cb828, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FinishLine
+  finishLayers:
+    serializedVersion: 2
+    m_Bits: 32768

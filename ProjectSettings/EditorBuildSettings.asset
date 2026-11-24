@@ -17,5 +17,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/TS Room.unity
     guid: 2e97b70f7d855cf42b5beda5ae0d4c66
+  - enabled: 1
+    path: Assets/Scenes/MazePart/PowSup-tutorial.unity
+    guid: 85c9cd491a12fd74d944d29c143c8294
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

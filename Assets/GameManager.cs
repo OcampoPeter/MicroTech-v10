@@ -1,73 +1,77 @@
-using UnityEngine; // Unity basics
-using UnityEngine.InputSystem; // lets us read the keyboard
-using UnityEngine.SceneManagement; // lets us load scenes
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
-public enum GameState // the three states of the game
+public enum GameState
 {
-    Playing, // the game is running
-    Complete, // the player finished
-    Crashed // the game crashed
+    Playing,
+    Complete,
+    Crashed
 }
 
-public class GameManager : MonoBehaviour // controls the end screens and restart
+public class GameManager : MonoBehaviour
 {
-    public static GameManager Instance; // easy access from other scripts
+    public static GameManager Instance;
 
-    [Header("Screens (leave both turned OFF in the Hierarchy)")] // Inspector title
-    public GameObject crashPanel; // the blue screen
-    public GameObject completePanel; // the finish screen
+    [Header("Screen (leave it turned OFF in the Hierarchy)")]
+    public GameObject crashPanel;
 
-    public GameState State = GameState.Playing; // the current state, visible in the Inspector
+    public GameState State = GameState.Playing;
 
-    void Awake() { Instance = this; } // save this script for easy access
+    [Header("Where to go if the maze was opened on its own")]
+    public string fallbackReturnScene = "TS Room";
 
-    void Start() // runs once at the start
+    void Awake() { Instance = this; }
+
+    void Start()
     {
-        Time.timeScale = 1f; // make sure time is running
-        if (crashPanel != null) crashPanel.SetActive(false); // hide the crash screen
-        if (completePanel != null) completePanel.SetActive(false); // hide the finish screen
+        Time.timeScale = 1f;
+        if (crashPanel != null) crashPanel.SetActive(false);
     }
 
-    void Update() // runs every frame
+    void Update()
     {
-        if (State == GameState.Crashed && Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame) // crashed and R was pressed
-            Restart(); // restart the maze
+        if (State == GameState.Crashed && Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
+            Restart();
     }
 
-    public void SetState(GameState newState) // changes the game state
+    public void SetState(GameState newState)
     {
-        if (State == newState) return; // already in this state, do nothing
-        State = newState; // save the new state
-        Debug.Log("Game state is now: " + State.ToString()); // show the state in the Console
+        if (State == newState) return;
+        State = newState;
+        Debug.Log("Game state is now: " + State.ToString());
 
-        if (State == GameState.Crashed) // the game crashed
+        if (State == GameState.Crashed)
         {
-            if (crashPanel != null) crashPanel.SetActive(true); // show the crash screen
-            Time.timeScale = 0f; // freeze the game
+            if (crashPanel != null) crashPanel.SetActive(true);
+            Time.timeScale = 0f;
         }
-        else if (State == GameState.Complete) // the player finished
+        else if (State == GameState.Complete)
         {
-            if (completePanel != null) completePanel.SetActive(true); // show the finish screen
-            Time.timeScale = 0f; // freeze the game
+            ReturnToTS();
         }
     }
 
-    [Header("Where Return goes if no scene was remembered")] // Inspector title
-    public string fallbackReturnScene = "TS Room"; // the scene to go back to if none was saved
-
-    public void ReturnToTS() // called by the Return button
+    public void ReturnToTS()
     {
-        if (State == GameState.Complete) // only if the player finished
-            PartRepair.MarkCurrentFixed(); // mark the part as fixed
+        if (State == GameState.Complete)
+            PartRepair.MarkCurrentFixed();
 
-        string scene = string.IsNullOrEmpty(MapPortal.ReturnScene) ? fallbackReturnScene : MapPortal.ReturnScene; // pick the scene to go back to
-        Time.timeScale = 1f; // un-freeze the game
-        SceneManager.LoadScene(scene); // load that scene
+        Time.timeScale = 1f;
+
+        if (MazeLoader.Instance != null && MazeLoader.Instance.InMaze)
+            MazeLoader.Instance.ReturnToTS();
+        else
+            SceneManager.LoadScene(string.IsNullOrEmpty(MapPortal.ReturnScene) ? fallbackReturnScene : MapPortal.ReturnScene);
     }
 
-    public void Restart() // restarts the current scene
+    public void Restart()
     {
-        Time.timeScale = 1f; // un-freeze the game
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex); // reload this scene
+        Time.timeScale = 1f;
+
+        if (MazeLoader.Instance != null && MazeLoader.Instance.InMaze)
+            MazeLoader.Instance.RestartMaze();
+        else
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }

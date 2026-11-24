@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 4224563560473668046}
   - component: {fileID: 5772307299989412774}
   - component: {fileID: 4147076971082868654}
+  - component: {fileID: 5368335012707181911}
   m_Layer: 0
   m_Name: PowerSupply
   m_TagString: Untagged
@@ -154,7 +155,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1e884a7c55785fa41ae7f869752ccabc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PartState
-  partId: RAM
+  partId: PowerSupply
   difficulty: 1
   brokenColor: {r: 1, g: 0.35, b: 0.35, a: 1}
   fixedColor: {r: 0.45, g: 1, b: 0.55, a: 1}
@@ -174,3 +175,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Grabbable
   displayName: PowerSupply
   description: A part of the PC.
+--- !u!114 &5368335012707181911
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 600998391008100660}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 492e533a47794a541962889c16ad622d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MapPortal
+  catalog: {fileID: 11400000, guid: c5cb3ecb92866e642aa6cd6b3785762a, type: 2}
+  sceneToLoad: Maze
+  interactKey: 19
+  loadDelay: 0.5

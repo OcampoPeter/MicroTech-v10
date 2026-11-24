@@ -1,22 +1,26 @@
-using UnityEngine;
+using UnityEngine; // Unity basics
 
-public class FinishDetector : MonoBehaviour
+[RequireComponent(typeof(Collider))] // this object must have a collider
+public class FinishLine : MonoBehaviour // goes on the FINISH LINE object, finishes the run when the player touches it
 {
-    [Tooltip("Which layers count as a finish line. Set this to the Finish layer.")]
-    public LayerMask finishLayers;
+    private bool finished = false; // true once the finish was reached
 
-    private bool finished = false;
-
-    void OnTriggerEnter(Collider other)
+    void Reset() // runs when the script is first added
     {
-        if (finished) return;
+        GetComponent<Collider>().isTrigger = true; // make the collider a trigger so the player walks through it
+    }
 
-        // Is the thing we touched on a finish layer?
-        if ((finishLayers.value & (1 << other.gameObject.layer)) == 0) return;
+    void OnTriggerEnter(Collider other) // runs when something touches the finish line
+    {
+        if (finished) return; // already finished, do nothing
+        if (!other.CompareTag("Player")) return; // only the player counts
 
-        finished = true;
+        finished = true; // mark as finished
+        Debug.Log("Finish line reached!"); // confirms the finish was detected
 
-        if (ScoreSystem.Instance != null)
-            ScoreSystem.Instance.Finish();
+        if (ScoreSystem.Instance != null) // if there is a ScoreSystem
+            ScoreSystem.Instance.Finish(); // tell it we finished
+        else // no ScoreSystem
+            Debug.LogWarning("No ScoreSystem found in the maze scene."); // tells us it is missing
     }
 }
