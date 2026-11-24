@@ -9,7 +9,7 @@ public class MapPortal : MonoBehaviour
     public PartCatalog catalog;
 
     [Header("Where this item sends you")]
-    [Tooltip("Used only if the part is not found in the catalog. The exact scene name, it must be in File > Build Profiles > Scene List.")]
+    [Tooltip("The exact name of the scene, for example Maze. It must be in File > Build > Scene List.")]
     public string sceneToLoad = "Maze";
 
     [Header("Interaction")]
@@ -17,10 +17,15 @@ public class MapPortal : MonoBehaviour
     [Tooltip("Seconds to wait before the scene loads. Gives time for a loading screen later.")]
     public float loadDelay = 0.5f;
 
+    [Header("Allow Teleport States")]
+    public bool allowWhileHeld = true;
+    public bool allowWhileInspecting = true;
+
+    // The scene to come back to. Another script can read this later to send you home.
     public static string ReturnScene;
 
     private Grabbable grabbable;
-    private PartState part;
+    private PartState part; // optional: tells us if this part is already fixed
     private bool loading;
 
     void OnEnable()
@@ -48,20 +53,37 @@ public class MapPortal : MonoBehaviour
     {
         if (loading || Keyboard.current == null) return;
 
-        if (!grabbable.IsHeld) return;
-
+        // A part that is already fixed has nothing left to repair
         if (part != null && part.IsFixed) return;
+
+        if (!IsHeldOrInspecting()) return;
 
         if (Keyboard.current[interactKey].wasPressedThisFrame)
             StartCoroutine(GoToMap());
     }
 
+    private bool IsHeldOrInspecting()
+    {
+        bool held = allowWhileHeld && grabbable != null && grabbable.IsHeld;
+
+        // Replace `false` with your inspect check, e.g. `grabbable.IsInspecting`
+        // or `PlayerLookInteract.CurrentInspected == grabbable`
+        bool inspecting = allowWhileInspecting && IsCurrentlyInspectingThisItem();
+
+        return held || inspecting;
+    }
+
+    private bool IsCurrentlyInspectingThisItem()
+    {
+        return false;
+    }
+
     System.Collections.IEnumerator GoToMap()
     {
         loading = true;
-        ReturnScene = SceneManager.GetActiveScene().name;
-        PartRepair.CurrentPart = part != null ? part.partId : null;
-        PartRepair.CurrentDifficulty = part != null ? part.difficulty : 1;
+        ReturnScene = SceneManager.GetActiveScene().name;                // remember where we came from
+        PartRepair.CurrentPart = part != null ? part.partId : null;     // remember which part we are fixing
+        PartRepair.CurrentDifficulty = part != null ? part.difficulty : 1; // and how hard its maze is
         Debug.Log("Going to map: " + sceneToLoad);
 
         yield return new WaitForSeconds(loadDelay);

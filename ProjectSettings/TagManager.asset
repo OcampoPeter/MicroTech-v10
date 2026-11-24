@@ -3,7 +3,8 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 3
-  tags: []
+  tags:
+  - Pickup
   layers:
   - Default
   - TransparentFX
@@ -20,7 +21,7 @@ TagManager:
   - Fried2
   - Fried3
   - Hazard
-  - Finish
+  - Fride4
   - 
   - 
   - 
