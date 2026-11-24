@@ -1,52 +1,46 @@
-using UnityEngine;
+using UnityEngine; // Gives access to Unity classes like MonoBehaviour, Animator
 
-// PLAYER ANIMATOR. Put this on the Player (same as before).
-// It only READS your movement scripts and sets Animator parameters. It moves nothing.
-public class PlayerAnimator : MonoBehaviour
+public class PlayerAnimator : MonoBehaviour // Reads the movement scripts and sets the Animator parameters (it moves nothing)
 {
-    [Tooltip("Leave empty: it finds the Animator on the model under the Player.")]
-    public Animator animator;
-    [Tooltip("How smoothly Speed follows the real speed. Higher = smoother.")]
-    public float speedDamping = 0.25f;
-    [Tooltip("Above this speed (m/s) at takeoff, the jump counts as a sprint jump. Walk is 5, sprint is 10.")]
-    public float sprintJumpSpeed = 7f;
-    [Tooltip("The ground flickers on slopes and steps. Grounded stays true this long (seconds) after leaving it.")]
-    public float groundedGrace = 0.08f;
+    [Tooltip("Leave empty: it finds the Animator on the model under the Player.")] // Hover text in the Inspector
+    public Animator animator; // The character's Animator
+    [Tooltip("How smoothly Speed follows the real speed. Higher = smoother.")] // Hover text in the Inspector
+    public float speedDamping = 0.25f; // How smoothly the Speed value follows
+    [Tooltip("Above this speed (m/s) at takeoff, the jump counts as a sprint jump. Walk is 5, sprint is 10.")] // Hover text in the Inspector
+    public float sprintJumpSpeed = 7f; // Speed that counts as a sprint jump
+    [Tooltip("The ground flickers on slopes and steps. Grounded stays true this long (seconds) after leaving it.")] // Hover text in the Inspector
+    public float groundedGrace = 0.08f; // Seconds Grounded stays true after leaving the ground
 
-    private PlayerMovement movement;
-    private CharacterController controller;
-    private float lastGroundedTime;
-    private bool wasGrounded = true;
-    private bool sprintJump;
+    private PlayerMovement movement; // The player's movement script
+    private CharacterController controller; // The player's CharacterController
+    private float lastGroundedTime; // When the player was last on the ground
+    private bool wasGrounded = true; // Was the player grounded last frame
+    private bool sprintJump; // True if the current jump started while sprinting
 
-    void Start()
+    void Start() // Runs once when the scene starts
     {
-        movement = GetComponent<PlayerMovement>();
-        controller = GetComponent<CharacterController>();
-        if (animator == null) animator = GetComponentInChildren<Animator>();
+        movement = GetComponent<PlayerMovement>(); // Find the movement script
+        controller = GetComponent<CharacterController>(); // Find the CharacterController
+        if (animator == null) animator = GetComponentInChildren<Animator>(); // Find the Animator if none was assigned
     }
 
-    void Update()
+    void Update() // Runs every frame
     {
-        if (animator == null || movement == null || controller == null) return;
+        if (animator == null || movement == null || controller == null) return; // Stop if something is missing
 
-        // Speed = real sideways speed in meters per second
-        animator.SetFloat("Speed", movement.HorizontalSpeed, speedDamping, Time.deltaTime);
+        animator.SetFloat("Speed", movement.HorizontalSpeed, speedDamping, Time.deltaTime); // Send the real sideways speed to the Animator
 
-        // Grounded, with a short grace so slopes and steps do not flicker.
-        // Rising fast always counts as in the air (so a jump starts at once).
-        float up = movement.velocity.y;
-        if (controller.isGrounded) lastGroundedTime = Time.time;
-        bool grounded = controller.isGrounded
-            || (Time.time - lastGroundedTime < groundedGrace && up <= 1f);
+        float up = movement.velocity.y; // The current up/down speed
+        if (controller.isGrounded) lastGroundedTime = Time.time; // Remember when we were last on the ground
+        bool grounded = controller.isGrounded // On the ground now
+            || (Time.time - lastGroundedTime < groundedGrace && up <= 1f); // Or only just left it and not rising fast
 
-        // At the moment of takeoff, remember if we were sprinting
-        if (wasGrounded && !grounded)
-            sprintJump = movement.HorizontalSpeed > sprintJumpSpeed;
-        wasGrounded = grounded;
+        if (wasGrounded && !grounded) // The moment of takeoff
+            sprintJump = movement.HorizontalSpeed > sprintJumpSpeed; // Remember if we were sprinting
+        wasGrounded = grounded; // Remember for the next frame
 
-        animator.SetBool("Grounded", grounded);
-        animator.SetFloat("VerticalSpeed", up);
-        animator.SetBool("SprintJump", sprintJump);
+        animator.SetBool("Grounded", grounded); // Send the grounded state to the Animator
+        animator.SetFloat("VerticalSpeed", up); // Send the up/down speed to the Animator
+        animator.SetBool("SprintJump", sprintJump); // Send the sprint jump state to the Animator
     }
 }

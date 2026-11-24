@@ -1,24 +1,24 @@
-using UnityEngine;
+using UnityEngine; // Unity basics
 
-public class StartTimerOnMove : MonoBehaviour
+public class StartTimerOnMove : MonoBehaviour // starts the timer when the player first moves
 {
-    PlayerInputHandler input; // your new Input System script on the Player
-    bool done = false;        // becomes true after the timer has started
+    PlayerInputHandler input; // the player's input script
+    bool done = false; // true after the timer has started
 
-    void Start()
+    void Start() // runs once at the start
     {
-        input = GetComponent<PlayerInputHandler>(); // finds it on the same object (the Player)
+        input = GetComponent<PlayerInputHandler>(); // get the input script on this object
     }
 
-    void Update()
+    void Update() // runs every frame
     {
-        if (done || input == null || LoadingScreen.IsLoading) return; // do nothing while loading
+        if (done || input == null || LoadingScreen.IsLoading) return; // stop if already started, missing input, or still loading
 
-        if (input.MoveInput.sqrMagnitude > 0.01f || // any move input (WASD / stick)
-            input.JumpTriggered)                    // jump counts as moving too
+        if (input.MoveInput.sqrMagnitude > 0.01f || // the player is pressing a move key
+            input.JumpTriggered) // or the player jumped
         {
-            if (RunTimer.Instance != null) RunTimer.Instance.StartTimer(); // start the timer on the first move
-            done = true;
+            if (RunTimer.Instance != null) RunTimer.Instance.StartTimer(); // start the timer
+            done = true; // never do this again
         }
     }
 }

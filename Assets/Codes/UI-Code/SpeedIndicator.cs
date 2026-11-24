@@ -1,53 +1,52 @@
-using UnityEngine;
-using TMPro;
+using UnityEngine; // Unity basics
+using TMPro; // lets us use TextMeshPro
 
-public class SpeedIndicator : MonoBehaviour
+public class SpeedIndicator : MonoBehaviour // shows the player's speed on screen
 {
-    [Header("References")]
-    public PlayerMovement player;
-    public TMP_Text speedText;
+    [Header("References")] // Inspector title
+    public PlayerMovement player; // the player script
+    public TMP_Text speedText; // the text that shows the speed
 
-    [Header("Colors")]
-    public Color normalColor = Color.white;
-    public Color fastColor = Color.yellow;
-    public Color veryFastColor = Color.red;
+    [Header("Colors")] // Inspector title
+    public Color normalColor = Color.white; // color at normal speed
+    public Color fastColor = Color.yellow; // color when fast
+    public Color veryFastColor = Color.red; // color when very fast
 
-    [Header("When the colors change")]
-    [Tooltip("Speed where it is fully RED, as a multiple of your max sprint speed. 1.6 = red at 16 m/s when max sprint is 10.")]
-    public float redAtMultiple = 1.6f;
-    [Tooltip("How smoothly the number follows your real speed.")]
-    public float numberSmoothing = 12f;
+    [Header("When the colors change")] // Inspector title
+    [Tooltip("Speed where it is fully RED, as a multiple of your max sprint speed. 1.6 = red at 16 m/s when max sprint is 10.")] // hint in the Inspector
+    public float redAtMultiple = 1.6f; // how fast you must go to be fully red
+    [Tooltip("How smoothly the number follows your real speed.")] // hint in the Inspector
+    public float numberSmoothing = 12f; // higher = the number follows faster
 
-    private float shownSpeed;
+    private float shownSpeed; // the smoothed speed we show
 
-    void Reset()
+    void Reset() // runs when the script is first added
     {
-        speedText = GetComponent<TMP_Text>();
+        speedText = GetComponent<TMP_Text>(); // grab the text on this object
     }
 
-    void Update()
+    void Update() // runs every frame
     {
-        if (player == null || speedText == null) return;
+        if (player == null || speedText == null) return; // missing something, do nothing
 
-        // Smooth the number so it doesn't jitter
-        shownSpeed = Mathf.Lerp(shownSpeed, player.HorizontalSpeed, numberSmoothing * Time.unscaledDeltaTime);
+        shownSpeed = Mathf.Lerp(shownSpeed, player.HorizontalSpeed, numberSmoothing * Time.unscaledDeltaTime); // move the shown speed toward the real speed
 
-        float sprint = player.maxSprintSpeed;
-        float red = sprint * redAtMultiple;
+        float sprint = player.maxSprintSpeed; // the normal top sprint speed
+        float red = sprint * redAtMultiple; // the speed where the color is fully red
 
-        Color color;
-        if (shownSpeed <= sprint)
+        Color color; // the color we will use
+        if (shownSpeed <= sprint) // at or under normal sprint
         {
-            color = normalColor;                                   // at or under normal sprint
+            color = normalColor; // use the normal color
         }
-        else
+        else // faster than sprint
         {
-            float t = Mathf.InverseLerp(sprint, red, shownSpeed);  // 0 at sprint speed, 1 at red speed
-            if (t < 0.5f) color = Color.Lerp(normalColor, fastColor, t * 2f);          // white to yellow
-            else color = Color.Lerp(fastColor, veryFastColor, (t - 0.5f) * 2f);        // yellow to red
+            float t = Mathf.InverseLerp(sprint, red, shownSpeed); // 0 at sprint speed, 1 at red speed
+            if (t < 0.5f) color = Color.Lerp(normalColor, fastColor, t * 2f); // blend white to yellow
+            else color = Color.Lerp(fastColor, veryFastColor, (t - 0.5f) * 2f); // blend yellow to red
         }
 
-        speedText.color = color;
-        speedText.text = shownSpeed.ToString("F0") + " m/s";
+        speedText.color = color; // apply the color
+        speedText.text = shownSpeed.ToString("F0") + " m/s"; // show the speed as a whole number
     }
 }

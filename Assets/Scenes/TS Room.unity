@@ -415,10 +415,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TSRoomFlow
   chute: {fileID: 172959001}
+  catalog: {fileID: 0}
   powerSupplyPrefab: {fileID: 956814865}
   pcPrefab: {fileID: 956814865}
   startDelay: 2
   gapBetweenPackages: 2
+  deliverCatalogParts: 1
   skipTutorial: 0
 --- !u!4 &1094001625
 Transform:
@@ -457,7 +459,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4406921439311355843, guid: cbfebbc83f4288740b3026056ae74007, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: -1.93
       objectReference: {fileID: 0}
     - target: {fileID: 4406921439311355843, guid: cbfebbc83f4288740b3026056ae74007, type: 3}
       propertyPath: m_LocalRotation.w
@@ -505,27 +507,27 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8780199489692435909, guid: cbfebbc83f4288740b3026056ae74007, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 2.610721
+      value: 1.4886813
       objectReference: {fileID: 0}
     - target: {fileID: 8780199489692435909, guid: cbfebbc83f4288740b3026056ae74007, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -2.479976
+      value: -2.2384589
       objectReference: {fileID: 0}
     - target: {fileID: 8780199489692435909, guid: cbfebbc83f4288740b3026056ae74007, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.98287725
+      value: 0.99937713
       objectReference: {fileID: 0}
     - target: {fileID: 8780199489692435909, guid: cbfebbc83f4288740b3026056ae74007, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0.18426174
+      value: -0.035290215
       objectReference: {fileID: 0}
     - target: {fileID: 8780199489692435909, guid: cbfebbc83f4288740b3026056ae74007, type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.00000013556894
+      value: -1.667828e-10
       objectReference: {fileID: 0}
     - target: {fileID: 8780199489692435909, guid: cbfebbc83f4288740b3026056ae74007, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.000000025415348
+      value: -5.88947e-12
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -683,7 +685,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 990548689867558074, guid: 869d6d6186085b747983e91aa2bd9d84, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -6.56
+      value: 5.16
       objectReference: {fileID: 0}
     - target: {fileID: 990548689867558074, guid: 869d6d6186085b747983e91aa2bd9d84, type: 3}
       propertyPath: m_LocalPosition.y
@@ -691,7 +693,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 990548689867558074, guid: 869d6d6186085b747983e91aa2bd9d84, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 6.46
+      value: 3.94
       objectReference: {fileID: 0}
     - target: {fileID: 990548689867558074, guid: 869d6d6186085b747983e91aa2bd9d84, type: 3}
       propertyPath: m_LocalRotation.w
@@ -732,8 +734,32 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 3568926894559609875, guid: 869d6d6186085b747983e91aa2bd9d84, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 9213872187190859227}
   m_SourcePrefab: {fileID: 100100000, guid: 869d6d6186085b747983e91aa2bd9d84, type: 3}
+--- !u!1 &9213872187190859226 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3568926894559609875, guid: 869d6d6186085b747983e91aa2bd9d84, type: 3}
+  m_PrefabInstance: {fileID: 9213872187190859225}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &9213872187190859227
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9213872187190859226}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 492e533a47794a541962889c16ad622d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MapPortal
+  catalog: {fileID: 11400000, guid: c5cb3ecb92866e642aa6cd6b3785762a, type: 2}
+  sceneToLoad: Maz
+  interactKey: 19
+  loadDelay: 0.5
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

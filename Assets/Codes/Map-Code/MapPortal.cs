@@ -1,55 +1,65 @@
-using UnityEngine;
-using UnityEngine.InputSystem;
-using UnityEngine.SceneManagement;
+using UnityEngine; // Unity basics
+using UnityEngine.InputSystem; // lets us read the keyboard
+using UnityEngine.SceneManagement; // lets us load scenes
 
-[RequireComponent(typeof(Grabbable))]
-public class MapPortal : MonoBehaviour
+[RequireComponent(typeof(Grabbable))] // this object must be grabbable
+public class MapPortal : MonoBehaviour // sends the player to a map when they press a key while holding this item
 {
-    [Header("Where this item sends you")]
-    [Tooltip("The exact name of the scene, for example Maze. It must be in File > Build Profiles > Scene List.")]
-    public string sceneToLoad = "Maze";
+    [Header("Part list (drag your PartCatalog here)")] // Inspector title
+    public PartCatalog catalog; // the list of parts and their scenes
 
-    [Header("Interaction")]
-    public Key interactKey = Key.E;
-    [Tooltip("Seconds to wait before the scene loads. Gives time for a loading screen later.")]
-    public float loadDelay = 0.5f;
+    [Header("Where this item sends you")] // Inspector title
+    [Tooltip("Used only if the part is not found in the catalog. The exact scene name, it must be in File > Build Profiles > Scene List.")] // hint in the Inspector
+    public string sceneToLoad = "Maze"; // the backup scene to load
 
-    // The scene to come back to. Another script can read this later to send you home.
-    public static string ReturnScene;
+    [Header("Interaction")] // Inspector title
+    public Key interactKey = Key.E; // the key to press
+    [Tooltip("Seconds to wait before the scene loads. Gives time for a loading screen later.")] // hint in the Inspector
+    public float loadDelay = 0.5f; // seconds to wait before loading
 
-    private Grabbable grabbable;
-    private PartState part;      // optional: tells us if this part is already fixed
-    private bool loading;
+    public static string ReturnScene; // the scene to come back to
 
-    void Start()
+    private Grabbable grabbable; // the Grabbable on this object
+    private PartState part; // the part info (optional)
+    private bool loading; // true once loading has started
+
+    void Start() // runs once at the start
     {
-        grabbable = GetComponent<Grabbable>();
-        part = GetComponent<PartState>();
+        grabbable = GetComponent<Grabbable>(); // get the Grabbable
+        part = GetComponent<PartState>(); // get the PartState if there is one
+
+        if (catalog != null && part != null) // we have a catalog and a part
+        {
+            PartEntry entry = catalog.Find(part.partId); // find this part in the catalog
+            if (entry != null && !string.IsNullOrEmpty(entry.sceneName)) // the part has a scene set
+            {
+                sceneToLoad = entry.sceneName; // use the scene from the catalog
+                part.difficulty = entry.difficulty; // use the difficulty from the catalog
+            }
+        }
     }
 
-    void Update()
+    void Update() // runs every frame
     {
-        if (loading || Keyboard.current == null) return;
+        if (loading || Keyboard.current == null) return; // stop if already loading or no keyboard
 
-        // Only works while you are holding this item
-        if (!grabbable.IsHeld) return;
+        if (!grabbable.IsHeld) return; // only works while holding this item
 
-        // A part that is already fixed has nothing left to repair
-        if (part != null && part.IsFixed) return;
+        if (part != null && part.IsFixed) return; // a fixed part has nothing left to repair
 
-        if (Keyboard.current[interactKey].wasPressedThisFrame)
-            StartCoroutine(GoToMap());
+        if (Keyboard.current[interactKey].wasPressedThisFrame) // the key was just pressed
+            StartCoroutine(GoToMap()); // start going to the map
     }
 
-    System.Collections.IEnumerator GoToMap()
+    System.Collections.IEnumerator GoToMap() // loads the map after a short wait
     {
-        loading = true;
-        ReturnScene = SceneManager.GetActiveScene().name;   // remember where we came from
-        PartRepair.CurrentPart = part != null ? part.partId : null;   // remember which part we are fixing
-        PartRepair.CurrentDifficulty = part != null ? part.difficulty : 1;   // and how hard its maze is
-        Debug.Log("Going to map: " + sceneToLoad);
+        loading = true; // mark as loading
+        ReturnScene = SceneManager.GetActiveScene().name; // remember the scene we came from
+        PartRepair.CurrentPart = part != null ? part.partId : null; // remember which part we are fixing
+        PartRepair.CurrentDifficulty = part != null ? part.difficulty : 1; // remember how hard its maze is
+        Debug.Log("Going to map: " + sceneToLoad); // show the scene name in the Console
 
-        yield return new WaitForSeconds(loadDelay);
-        SceneManager.LoadScene(sceneToLoad);
+        yield return new WaitForSeconds(loadDelay); // wait a moment
+        SceneManager.LoadScene(sceneToLoad); // load the map scene
     }
 }

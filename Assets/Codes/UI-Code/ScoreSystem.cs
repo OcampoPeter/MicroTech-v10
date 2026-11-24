@@ -1,117 +1,111 @@
-using UnityEngine;
-using TMPro;
+using UnityEngine; // Unity basics
+using TMPro; // lets us use TextMeshPro
 
-public class ScoreSystem : MonoBehaviour
+public class ScoreSystem : MonoBehaviour // works out and shows the score
 {
-    public static ScoreSystem Instance;
+    public static ScoreSystem Instance; // easy access from other scripts
 
-    [Header("UI")]
-    public TMP_Text scoreText;
+    [Header("UI")] // Inspector title
+    public TMP_Text scoreText; // the text that shows the score
 
-    [Header("Score formula")]
-    public int baseScore = 1000;
-    [Tooltip("The time you should beat on difficulty 1 (seconds).")]
-    public float parTime = 60f;
-    public int pointsPerSecondUnderPar = 10;
-    public int pointsLostPerFall = 150;
-    [Tooltip("Points lost for every 1% of corruption you finish with.")]
-    public float pointsLostPerCorruptionPercent = 5f;
+    [Header("Score formula")] // Inspector title
+    public int baseScore = 1000; // the score you start with
+    [Tooltip("The time you should beat on difficulty 1 (seconds).")] // hint in the Inspector
+    public float parTime = 60f; // the target time on difficulty 1
+    public int pointsPerSecondUnderPar = 10; // points gained for each second faster than par
+    public int pointsLostPerFall = 150; // points lost for each fall
+    [Tooltip("Points lost for every 1% of corruption you finish with.")] // hint in the Inspector
+    public float pointsLostPerCorruptionPercent = 5f; // points lost per 1% corruption
 
-    [Header("Difficulty scaling")]
-    [Tooltip("Each difficulty level makes the par time this much shorter. 0.1 = 10% shorter.")]
-    public float parShrinkPerLevel = 0.1f;
-    [Tooltip("Each difficulty level adds this much to the score multiplier. 0.25 = +25%.")]
-    public float scoreBonusPerLevel = 0.25f;
+    [Header("Difficulty scaling")] // Inspector title
+    [Tooltip("Each difficulty level makes the par time this much shorter. 0.1 = 10% shorter.")] // hint in the Inspector
+    public float parShrinkPerLevel = 0.1f; // how much shorter par gets per level
+    [Tooltip("Each difficulty level adds this much to the score multiplier. 0.25 = +25%.")] // hint in the Inspector
+    public float scoreBonusPerLevel = 0.25f; // how much bonus score per level
 
-    [Tooltip("Only used when you press Play directly in this maze scene (no part carried in). 0 = use 1.")]
-    public int directPlayDifficulty = 0;
+    [Tooltip("Only used when you press Play directly in this maze scene (no part carried in). 0 = use 1.")] // hint in the Inspector
+    public int directPlayDifficulty = 0; // difficulty to use when testing this scene alone
 
-    // Worked out from the difficulty of the part you came from (1 if you started this scene directly)
-    public int Difficulty { get; private set; }
-    public float CurrentPar { get; private set; }
+    public int Difficulty { get; private set; } // the current difficulty level
+    public float CurrentPar { get; private set; } // the par time for this difficulty
 
-    public int Falls { get; private set; }
-    public int Score { get; private set; }
-    public int BestScore { get; private set; }
-    public bool IsNewBest { get; private set; }
+    public int Falls { get; private set; } // how many times the player fell
+    public int Score { get; private set; } // the final score
+    public int BestScore { get; private set; } // the best score saved
+    public bool IsNewBest { get; private set; } // true if this run beat the best score
 
-    private const string BestKey = "BestScore";   // the name the score is saved under
-    public bool IsFinished { get; private set; }
+    private const string BestKey = "BestScore"; // the name the best score is saved under
+    public bool IsFinished { get; private set; } // true after the run is finished
 
-    void Awake() { Instance = this; }
+    void Awake() { Instance = this; } // save this script for easy access
 
-    void Start()
+    void Start() // runs once at the start
     {
-        BestScore = PlayerPrefs.GetInt(BestKey, 0);   // 0 if nothing saved yet
+        BestScore = PlayerPrefs.GetInt(BestKey, 0); // load the saved best score (0 if none)
 
-        // Difficulty formula: par = base par x (1 - shrink) ^ (difficulty - 1)
-        bool cameFromPart = !string.IsNullOrEmpty(PartRepair.CurrentPart);
-        int level = (!cameFromPart && directPlayDifficulty > 0) ? directPlayDifficulty : PartRepair.CurrentDifficulty;
-        Difficulty = Mathf.Max(1, level);
-        CurrentPar = parTime * Mathf.Pow(1f - parShrinkPerLevel, Difficulty - 1);
-        Debug.Log("Difficulty " + Difficulty.ToString() + ", par time " + CurrentPar.ToString("F1") + "s");
+        bool cameFromPart = !string.IsNullOrEmpty(PartRepair.CurrentPart); // true if a part was carried in
+        int level = (!cameFromPart && directPlayDifficulty > 0) ? directPlayDifficulty : PartRepair.CurrentDifficulty; // pick which difficulty to use
+        Difficulty = Mathf.Max(1, level); // difficulty is never below 1
+        CurrentPar = parTime * Mathf.Pow(1f - parShrinkPerLevel, Difficulty - 1); // make par shorter for higher difficulty
+        Debug.Log("Difficulty " + Difficulty.ToString() + ", par time " + CurrentPar.ToString("F1") + "s"); // show the result in the Console
 
-        UpdateText();
+        UpdateText(); // update the score text
     }
 
-    public void RegisterFall()
+    public void RegisterFall() // call this when the player falls
     {
-        if (IsFinished) return;
-        Falls++;
+        if (IsFinished) return; // ignore falls after finishing
+        Falls++; // add one fall
     }
 
-    public void Finish()
+    public void Finish() // call this when the player finishes
     {
-        if (IsFinished) return;
-        IsFinished = true;
-        if (GameManager.Instance != null)
-            GameManager.Instance.SetState(GameState.Complete);
+        if (IsFinished) return; // do nothing if already finished
+        IsFinished = true; // mark as finished
+        if (GameManager.Instance != null) // if there is a Game Manager
+            GameManager.Instance.SetState(GameState.Complete); // tell it the level is complete
 
-        RunTimer timer = RunTimer.Instance;
-        timer.Stop();
+        RunTimer timer = RunTimer.Instance; // get the timer
+        timer.Stop(); // stop the clock
 
-        // Score = base + (seconds under par x points) - (falls x penalty)
-        int secondsUnderPar = Mathf.RoundToInt(CurrentPar - timer.Time_);
-        float corruption = CorruptionSystem.Instance != null ? CorruptionSystem.Instance.Corruption : 0f;
-        int corruptionPenalty = Mathf.RoundToInt(corruption * pointsLostPerCorruptionPercent);
-        int rawScore = baseScore + secondsUnderPar * pointsPerSecondUnderPar
-                     - Falls * pointsLostPerFall - corruptionPenalty;
-        if (rawScore < 0) rawScore = 0;
+        int secondsUnderPar = Mathf.RoundToInt(CurrentPar - timer.Time_); // how many seconds faster than par
+        float corruption = CorruptionSystem.Instance != null ? CorruptionSystem.Instance.Corruption : 0f; // get the corruption (0 if none)
+        int corruptionPenalty = Mathf.RoundToInt(corruption * pointsLostPerCorruptionPercent); // points lost from corruption
+        int rawScore = baseScore + secondsUnderPar * pointsPerSecondUnderPar // base score plus time bonus
+                     - Falls * pointsLostPerFall - corruptionPenalty; // minus fall and corruption penalties
+        if (rawScore < 0) rawScore = 0; // score never goes below zero
 
-        // Harder mazes pay more: multiplier = 1 + bonus x (difficulty - 1)
-        float multiplier = 1f + scoreBonusPerLevel * (Difficulty - 1);
-        Score = Mathf.RoundToInt(rawScore * multiplier);
+        float multiplier = 1f + scoreBonusPerLevel * (Difficulty - 1); // harder levels give a bigger multiplier
+        Score = Mathf.RoundToInt(rawScore * multiplier); // the final score
 
-        // Save it if it beats the best score
-        if (Score > BestScore)
+        if (Score > BestScore) // beat the best score
         {
-            BestScore = Score;
-            IsNewBest = true;
-            PlayerPrefs.SetInt(BestKey, BestScore);
-            PlayerPrefs.Save();
+            BestScore = Score; // save it as the new best
+            IsNewBest = true; // remember it is a new best
+            PlayerPrefs.SetInt(BestKey, BestScore); // store the best score
+            PlayerPrefs.Save(); // write it to disk
         }
 
-        UpdateText();
+        UpdateText(); // update the score text
     }
 
-    void UpdateText()
+    void UpdateText() // updates the score text on screen
     {
-        if (scoreText == null) return;
-        string best = "BEST " + BestScore.ToString();
-        if (!IsFinished)
+        if (scoreText == null) return; // no text, do nothing
+        string best = "BEST " + BestScore.ToString(); // the best score words
+        if (!IsFinished) // still playing
         {
-            scoreText.text = "SCORE ---   " + best;
-            return;
+            scoreText.text = "SCORE ---   " + best; // show dashes and the best score
+            return; // stop here
         }
-        scoreText.text = "FINISHED! SCORE " + Score.ToString() + "\n" + (IsNewBest ? "NEW BEST!" : best);
+        scoreText.text = "FINISHED! SCORE " + Score.ToString() + "\n" + (IsNewBest ? "NEW BEST!" : best); // show the final score
     }
 
-    // Right-click the ScoreSystem component and choose this to wipe the saved best score
-    [ContextMenu("Reset Best Score")]
-    void ResetBestScore()
+    [ContextMenu("Reset Best Score")] // adds a right-click option in the Inspector
+    void ResetBestScore() // wipes the saved best score
     {
-        PlayerPrefs.DeleteKey(BestKey);
-        BestScore = 0;
-        UpdateText();
+        PlayerPrefs.DeleteKey(BestKey); // delete the saved score
+        BestScore = 0; // set it back to 0
+        UpdateText(); // update the text
     }
 }

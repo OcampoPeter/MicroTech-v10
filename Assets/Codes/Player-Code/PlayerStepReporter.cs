@@ -1,118 +1,91 @@
-// WHERE TO PUT THIS FILE:  Assets Task / Shared
-// ------------------------------------------------------------
-using UnityEngine;
+using UnityEngine; // Gives access to Unity classes like MonoBehaviour, Collider, Physics
 
-// Goes on the player (added automatically to the object tagged "Player").
-// It notices WHAT the player is standing on and tells that platform's StepTrigger
-// each time the player lands on it.
-//
-// A hit = the player jumps while standing on a platform and lands back on the SAME platform.
-// Getting onto the platform (walking or jumping onto it) does not count.
-// Works with a CharacterController player. A Rigidbody player works too.
-public class PlayerStepReporter : MonoBehaviour
+public class PlayerStepReporter : MonoBehaviour // Goes on the player and tells platforms when the player lands on them
 {
-    // The reporter that is currently active in the scene.
-    public static PlayerStepReporter Current;
+    public static PlayerStepReporter Current; // The reporter that is currently active in the scene
 
-    // If the player touched no ground for this many seconds, they count as "in the air".
-    const float AirTime = 0.12f;
+    const float AirTime = 0.12f; // Seconds without touching ground before the player counts as "in the air"
 
-    // Surfaces pointing up more than this count as "ground" (ignores walls and ceilings).
-    const float MinUpNormal = 0.5f;
+    const float MinUpNormal = 0.5f; // Surfaces pointing up more than this count as ground (ignores walls and ceilings)
 
-    StepTrigger lastSurface;     // the platform the player was last standing on
-    float lastTouchTime = -10f;  // when the player last touched ground
+    StepTrigger lastSurface; // The platform the player was last standing on
+    float lastTouchTime = -10f; // When the player last touched ground
 
-    // Finds the player and adds this reporter to it (does nothing if it already exists).
-    public static void EnsureAttached()
+    public static void EnsureAttached() // Finds the player and adds this reporter to it
     {
-        if (Current != null) return;
+        if (Current != null) return; // Already exists, so do nothing
 
-        GameObject player = GameObject.FindWithTag("Player");
-        if (player == null) return;
+        GameObject player = GameObject.FindWithTag("Player"); // Look for the object tagged "Player"
+        if (player == null) return; // No player yet
 
-        var existing = player.GetComponent<PlayerStepReporter>();
-        Current = existing != null ? existing : player.AddComponent<PlayerStepReporter>();
+        var existing = player.GetComponent<PlayerStepReporter>(); // Check if the player already has one
+        Current = existing != null ? existing : player.AddComponent<PlayerStepReporter>(); // Use it, or add a new one
     }
 
-    void Awake() => Current = this;
+    void Awake() => Current = this; // Become the active reporter
 
-    Collider playerCol;   // the player's own collider (used to look straight down)
+    Collider playerCol; // The player's own collider (used to look straight down)
 
-    // Standing still: the player may not touch anything new each frame, so look straight down
-    // and report the platform under the feet (only platforms in "StandOnIt" mode).
-    void Update()
+    void Update() // Runs every frame
     {
-        if (playerCol == null) playerCol = GetComponent<Collider>();
-        if (playerCol == null) return;
+        if (playerCol == null) playerCol = GetComponent<Collider>(); // Find the player's collider
+        if (playerCol == null) return; // Stop if there is none
 
-        Bounds b = playerCol.bounds;
-        if (Physics.Raycast(b.center, Vector3.down, out RaycastHit hit, b.extents.y + 0.35f,
-                            Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+        Bounds b = playerCol.bounds; // The collider's size and position
+        if (Physics.Raycast(b.center, Vector3.down, out RaycastHit hit, b.extents.y + 0.35f, // Look straight down from the middle of the player
+                            Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)) // Ignore triggers
         {
-            StepTrigger surface = hit.collider.GetComponentInParent<StepTrigger>();
-            if (surface != null && surface.mode == StepMode.StandOnIt)
-                surface.Report(hit.collider);
+            StepTrigger surface = hit.collider.GetComponentInParent<StepTrigger>(); // Find the platform under the feet
+            if (surface != null && surface.mode == StepMode.StandOnIt) // Only platforms where standing counts
+                surface.Report(hit.collider); // Tell the platform
         }
     }
 
-    // CharacterController players: called when the controller touches something while moving.
-    void OnControllerColliderHit(ControllerColliderHit hit)
+    void OnControllerColliderHit(ControllerColliderHit hit) // CharacterController players: runs when the controller touches something
     {
-        if (hit.normal.y < MinUpNormal) return; // not the top of something
-        Touch(hit.collider);
+        if (hit.normal.y < MinUpNormal) return; // Not the top of something, so ignore it
+        Touch(hit.collider); // Handle the touch
     }
 
-    // Rigidbody players: called every physics step while touching something.
-    void OnCollisionStay(Collision collision)
+    void OnCollisionStay(Collision collision) // Rigidbody players: runs every physics step while touching something
     {
-        foreach (var contact in collision.contacts)
+        foreach (var contact in collision.contacts) // Go through each contact point
         {
-            if (contact.normal.y >= MinUpNormal)
+            if (contact.normal.y >= MinUpNormal) // If it is the top of something
             {
-                Touch(collision.collider);
-                return;
+                Touch(collision.collider); // Handle the touch
+                return; // Stop after the first good contact
             }
         }
     }
 
-    // The player is touching the top of this collider right now.
-    void Touch(Collider ground)
+    void Touch(Collider ground) // The player is touching the top of this collider right now
     {
-        // Which task platform does this collider belong to? (the platform itself or a child of it)
-        StepTrigger surface = ground.GetComponentInParent<StepTrigger>();
+        StepTrigger surface = ground.GetComponentInParent<StepTrigger>(); // Find which task platform this collider belongs to
 
-        float now = Time.time;
-        bool wasInAir = now - lastTouchTime > AirTime;
+        float now = Time.time; // The current time
+        bool wasInAir = now - lastTouchTime > AirTime; // True if the player had been in the air
 
-        // Remember where the player was standing BEFORE this touch.
-        StepTrigger previous = lastSurface;
+        StepTrigger previous = lastSurface; // Remember where the player stood before this touch
 
-        lastTouchTime = now;
-        lastSurface = surface;
+        lastTouchTime = now; // Save this touch time
+        lastSurface = surface; // Save this platform
 
-        // Standing on something that is not a task platform: nothing to report.
-        if (surface == null) return;
+        if (surface == null) return; // Not a task platform, so nothing to report
 
-        if (surface.mode == StepMode.JumpOnIt)
+        if (surface.mode == StepMode.JumpOnIt) // Bent platforms
         {
-            // Bent: count only a jump made while standing on THIS platform that lands back on it.
-            // Arriving from somewhere else (walking or jumping onto it) does NOT count.
-            if (wasInAir && previous == surface)
-                surface.Report(ground);
+            if (wasInAir && previous == surface) // A jump that lands back on the same platform
+                surface.Report(ground); // Count it
         }
-        else if (surface.mode == StepMode.StepOnIt)
+        else if (surface.mode == StepMode.StepOnIt) // Fried platforms
         {
-            // Fried: count when the player gets onto the platform
-            // (came from somewhere else, or landed on it after being in the air).
-            if (previous != surface || wasInAir)
-                surface.Report(ground);
+            if (previous != surface || wasInAir) // Got onto the platform from somewhere else, or landed after being in the air
+                surface.Report(ground); // Count it
         }
-        else
+        else // Missing platforms
         {
-            // Missing: just standing on the platform is enough. The platform's own cooldown
-            // keeps this from repeating too fast.
-            surface.Report(ground);
+            surface.Report(ground); // Just standing on it is enough
         }
     }
 }
