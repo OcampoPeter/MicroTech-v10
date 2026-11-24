@@ -175,7 +175,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4122726968858387292}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.035290487, y: -9.315159e-16, z: 4.8134702e-17, w: 0.99937713}
+  m_LocalRotation: {x: -0.035290215, y: -1.633585e-10, z: 9.108279e-11, w: 0.99937713}
   m_LocalPosition: {x: 0, y: 1.4285245, z: -3.0896027}
   m_LocalScale: {x: 19.429094, y: 19.429085, z: 27.3}
   m_ConstrainProportionsScale: 0
@@ -453,8 +453,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4530517787995206276}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.035290483, y: -9.343808e-16, z: -3.2995305e-17, w: 0.99937713}
-  m_LocalPosition: {x: 0, y: 1.4285245, z: -3.089612}
+  m_LocalRotation: {x: -0.035290215, y: -1.667828e-10, z: -5.88947e-12, w: 0.99937713}
+  m_LocalPosition: {x: 0, y: 1.428527, z: -3.0896027}
   m_LocalScale: {x: 0.42832053, y: 0.42832053, z: 0.42832053}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -872,15 +872,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 5ead1b795bed38c4aa0df73dbad68493, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -60.950226
+      value: -189.89
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 5ead1b795bed38c4aa0df73dbad68493, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -6.4226403
+      value: 68.7
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 5ead1b795bed38c4aa0df73dbad68493, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -343.89343
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 5ead1b795bed38c4aa0df73dbad68493, type: 3}
       propertyPath: m_LocalRotation.w
@@ -1055,6 +1055,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 5ead1b795bed38c4aa0df73dbad68493, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6012623386201700940}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 5ead1b795bed38c4aa0df73dbad68493, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8689284563315582013}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 5ead1b795bed38c4aa0df73dbad68493, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6994014849438390009}
   m_SourcePrefab: {fileID: 100100000, guid: 5ead1b795bed38c4aa0df73dbad68493, type: 3}
 --- !u!1 &3919071894174991737 stripped
 GameObject:
@@ -1439,17 +1445,52 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HeatSystem
   activeSceneName: CPU
   maxHeat: 100
-  deathThreshold: 95
+  dangerThreshold: 90
   heatPerSecond: 2.5
   coolPerSecond: 15
+  dangerSeconds: 60
+  corruptionOnOverheat: 100
   coolantLayer:
     serializedVersion: 2
     m_Bits: 256
+  footRadius: 0.4
+  debugLogs: 1
   heatBar: {fileID: 0}
   fillImage: {fileID: 0}
   coolColor: {r: 0.25, g: 0.55, b: 1, a: 1}
   warmColor: {r: 1, g: 0.6, b: 0.1, a: 1}
   hotColor: {r: 0.95, g: 0.15, b: 0.1, a: 1}
+--- !u!114 &8689284563315582013
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3919071894174991737}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be91819161b9059479b468ba007d0e4a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HazardDetector
+  hazardLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  timePenalty: 3
+  corruptionAmount: 5
+  cooldown: 1.5
+  debugLogs: 0
+--- !u!114 &6994014849438390009
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3919071894174991737}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd279048eb02ca949b01859b1ad372aa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StartTimerOnMove
 --- !u!4 &4406921439311355843 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 5ead1b795bed38c4aa0df73dbad68493, type: 3}

@@ -1,7 +1,6 @@
 using UnityEngine;
 
-// Runs before PlayerMovement so IsWallRunning is up to date when movement checks it.
-[DefaultExecutionOrder(-50)]
+[DefaultExecutionOrder(-50)] // runs before PlayerMovement so IsWallRunning is up to date when movement checks it
 public class PlayerWallRun : MonoBehaviour
 {
     [Header("References")]
@@ -69,6 +68,12 @@ public class PlayerWallRun : MonoBehaviour
 
     void Update()
     {
+        if (LoadingScreen.IsLoading) // frozen while the loading screen is up
+        {
+            StopWallRunning();
+            return;
+        }
+
         if (Time.time < blockedUntil)
         {
             StopWallRunning();

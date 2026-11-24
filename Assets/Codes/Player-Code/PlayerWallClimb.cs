@@ -19,6 +19,10 @@ public class PlayerWallClimb : MonoBehaviour
     [Tooltip("After a climb jump the wall run is blocked for this long (seconds), so it does not grab you back onto the wall.")]
     public float wallRunBlockTime = 0.6f;
 
+    [Header("Smooth launch")]
+    [Tooltip("Seconds the upward speed takes to build up. 0 = instant (the old, jerky launch). Higher = softer start. Try 0.15 to 0.3.")]
+    public float launchRampTime = 0.2f;
+
     [Header("Testing")]
     public bool showDebug = true;   // small text under the brake box
 
@@ -28,6 +32,9 @@ public class PlayerWallClimb : MonoBehaviour
     private CharacterController controller;
     private PlayerMovement movement;
     private PlayerWallRun wallRun;
+
+    private float rampStart = -1f;   // time the launch started (-1 = not launching)
+    private float rampTargetUp;      // the upward speed we are building up to
 
     void Start()
     {
@@ -41,6 +48,17 @@ public class PlayerWallClimb : MonoBehaviour
     {
         // Touch the floor = the jumps come back
         if (controller.isGrounded) JumpsLeft = maxJumps;
+
+        // Smooth launch: the upward speed eases in instead of appearing at once
+        if (rampStart >= 0f)
+        {
+            float t = launchRampTime <= 0f ? 1f : (Time.time - rampStart) / launchRampTime;
+            float upSpeed = Mathf.Lerp(0f, rampTargetUp, Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t)));
+            Vector3 v = movement.velocity;
+            v.y = Mathf.Max(v.y, upSpeed);   // never slow you down, only build up
+            movement.velocity = v;
+            if (t >= 1f) rampStart = -1f;
+        }
     }
 
     // Called by PlayerWallBrake. wallNormal points away from the wall.
@@ -50,7 +68,18 @@ public class PlayerWallClimb : MonoBehaviour
         JumpsLeft--;
 
         float up = Mathf.Sqrt(jumpHeight * -2f * movement.gravity);
-        movement.velocity = new Vector3(0f, up, 0f);
+        if (launchRampTime > 0f)
+        {
+            // start from zero and build up over launchRampTime
+            movement.velocity = Vector3.zero;
+            rampTargetUp = up;
+            rampStart = Time.time;
+        }
+        else
+        {
+            movement.velocity = new Vector3(0f, up, 0f);
+            rampStart = -1f;
+        }
         movement.SetHorizontalVelocity(Vector3.zero);
         movement.AddPush(wallNormal * awayForce);
         if (wallRun != null) wallRun.BlockFor(wallRunBlockTime);

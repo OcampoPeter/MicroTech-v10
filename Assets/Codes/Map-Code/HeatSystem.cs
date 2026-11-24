@@ -1,6 +1,3 @@
-// WHERE TO PUT THIS FILE: Assets > Codes > Player-Code (replace the old HeatSystem.cs)
-// WHERE TO USE IT: drag it onto Player3DModel (the object with the Character Controller)
-
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -15,7 +12,7 @@ public class HeatSystem : MonoBehaviour
     [SerializeField] float dangerThreshold = 90f;      // danger zone starts here
     [SerializeField] float heatPerSecond = 2.5f;       // normal buildup (below danger)
     [SerializeField] float coolPerSecond = 15f;        // cooling while standing on coolant
-    [SerializeField] float dangerSeconds = 30f;        // time to go from 90% to 100%
+    [SerializeField] float dangerSeconds = 60f;        // time to go from 90% to 100% (1 minute)
 
     [Header("Overheat Result")]
     [SerializeField] int corruptionOnOverheat = 100;   // corruption given at 100% heat
@@ -23,6 +20,7 @@ public class HeatSystem : MonoBehaviour
     [Header("Cooling (step check)")]
     [SerializeField] LayerMask coolantLayer;           // pick "Coolant"
     [SerializeField] float footRadius = 0.4f;          // size of the check at your feet
+    [SerializeField] bool debugLogs = true;            // prints cooling ON/OFF in the Console
 
     [Header("UI")]
     [SerializeField] Slider heatBar;
@@ -37,13 +35,19 @@ public class HeatSystem : MonoBehaviour
     float currentHeat;
     bool overheated;
     bool systemActive;
+    bool wasCooling;
 
     // other scripts (like CoolantIcons) read this to know when to show warnings
+    public Slider HeatBar => heatBar;
     public bool IsInDanger => systemActive && !overheated && currentHeat >= dangerThreshold;
 
     void Awake()
     {
         cc = GetComponent<CharacterController>();
+
+        // if the Coolant Layer field was left on "Nothing", use the layer named "Coolant"
+        if (coolantLayer.value == 0)
+            coolantLayer = LayerMask.GetMask("Coolant");
     }
 
     void OnEnable()
@@ -79,8 +83,17 @@ public class HeatSystem : MonoBehaviour
     void Update()
     {
         if (!systemActive || overheated) return;
+        if (LoadingScreen.IsLoading) return; // heat does not build while the loading screen is up
+        if (RunTimer.Instance != null && !RunTimer.Instance.HasStarted) return; // heat waits until the player first moves
 
-        if (IsOnCoolant())
+        bool cooling = IsOnCoolant();
+        if (cooling != wasCooling)
+        {
+            wasCooling = cooling;
+            if (debugLogs) Debug.Log("HeatSystem: cooling " + (cooling ? "ON" : "OFF"));
+        }
+
+        if (cooling)
         {
             currentHeat -= coolPerSecond * Time.deltaTime;
         }

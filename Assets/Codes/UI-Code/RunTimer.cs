@@ -1,32 +1,28 @@
 using UnityEngine;
 using TMPro;
 
-// The speedrun timer. Put this on an empty object called "RunTimer".
 public class RunTimer : MonoBehaviour
 {
-    public static RunTimer Instance;
+    public static RunTimer Instance; // lets other scripts use RunTimer.Instance
 
     [Header("UI")]
-    public TMP_Text timerText;
-    [Tooltip("A second text placed next to the timer. It shows +3s when a hazard hits.")]
-    public TMP_Text penaltyText;
-    [Tooltip("How long the +3s stays on screen (seconds).")]
-    public float penaltyShowTime = 1.5f;
+    public TMP_Text timerText;      // the main timer text
+    public TMP_Text penaltyText;    // second text next to the timer, shows +3s when a hazard hits
+    public float penaltyShowTime = 1.5f; // how long the +3s stays on screen (seconds)
 
-    public float Time_ { get; private set; }   // seconds on the clock
-    public float PenaltyTotal { get; private set; }
+    public float Time_ { get; private set; }         // seconds on the clock
+    public float PenaltyTotal { get; private set; }  // total penalty seconds added so far
 
-    private float penaltyShownAt = -10f;
-    private bool stopped;
+    private float penaltyShownAt = -10f; // when the last penalty appeared
+    private bool stopped;                // true after the finish line
+    private bool started;                // true after the player first moves
 
     void Awake() { Instance = this; }
 
-    // Turns seconds into  hours:minutes:seconds.hundredths   (example: 375.6 -> 0:06:15.60)
-    // Public and static, so any other script can use it: RunTimer.FormatTime(seconds)
-    public static string FormatTime(float seconds, bool showHundredths = true)
+    public static string FormatTime(float seconds, bool showHundredths = true) // turns seconds into 0:06:15.60
     {
         if (seconds < 0f) seconds = 0f;
-        int total = Mathf.FloorToInt(seconds * 100f);   // everything in hundredths of a second
+        int total = Mathf.FloorToInt(seconds * 100f); // everything in hundredths of a second
         int hundredths = total % 100;
         int secs = (total / 100) % 60;
         int mins = (total / 6000) % 60;
@@ -39,17 +35,18 @@ public class RunTimer : MonoBehaviour
 
     void Start()
     {
-        if (penaltyText != null) penaltyText.text = "";
+        if (penaltyText != null) penaltyText.text = ""; // hide the penalty text at the start
     }
 
     void Update()
     {
-        if (!stopped) Time_ += Time.deltaTime;
+        if (started && !stopped && !LoadingScreen.IsLoading) // only count after the first move, never during loading
+            Time_ += Time.deltaTime;
+
         if (timerText != null)
             timerText.text = "TIME " + FormatTime(Time_);
 
-        // Fade the +3s out after it appears
-        if (penaltyText != null)
+        if (penaltyText != null) // fade the +3s out after it appears
         {
             float age = Time.time - penaltyShownAt;
             if (age < penaltyShowTime)
@@ -65,14 +62,19 @@ public class RunTimer : MonoBehaviour
         }
     }
 
-    // Used by the finish line: freezes the clock
-    public void Stop()
+    public bool HasStarted { get { return started; } } // other scripts (like HeatSystem) check this
+
+    public void StartTimer() // called by StartTimerOnMove on the first move
+    {
+        started = true;
+    }
+
+    public void Stop() // used by the finish line, freezes the clock
     {
         stopped = true;
     }
 
-    // Used by hazards: adds seconds to the clock as a penalty
-    public void AddPenalty(float seconds)
+    public void AddPenalty(float seconds) // used by hazards, adds seconds as a penalty
     {
         Time_ += seconds;
         PenaltyTotal += seconds;

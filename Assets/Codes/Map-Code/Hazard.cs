@@ -7,5 +7,5 @@ public class Hazard : MonoBehaviour
     public float timePenalty = 3f;
 
     [Tooltip("Corruption percent added when you touch it.")]
-    public float corruptionAmount = 10f;
+    public float corruptionAmount = 5f;
 }

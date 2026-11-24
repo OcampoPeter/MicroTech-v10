@@ -61,6 +61,9 @@ public class PlayerWallBrake : MonoBehaviour
     private PlayerWallRun wallRun;
     private PlayerWallClimb climb;
     private WallClingAnimation clingAnim;   // ANIM: plays the hang animations
+    [Tooltip("Seconds the jump animation plays BEFORE the player actually leaves the wall. 0 = instant.")]
+    public float jumpWindUp = 0.2f;   // ANIM
+    private float pendingJumpAt = -1f;   // ANIM: time when the delayed climb jump really happens
     private float spaceReleasedAt = -1f;
 
     private Vector3 vel;            // the speed we control while braking
@@ -132,12 +135,25 @@ public class PlayerWallBrake : MonoBehaviour
         timer = 0f;
         noWallTime = 0f;
         spaceReleasedAt = -1f;
+        pendingJumpAt = -1f;   // ANIM
         Debug.Log("[Brake] Started. Speed " + vel.magnitude.ToString("F1") + " m/s, it will take about " + (vel.magnitude / brakeDeceleration).ToString("F1") + " s to stop.");
     }
 
     // ---------- Running ----------
     void RunBrake()
     {
+        // ANIM: the jump animation has started; wait for the wind-up, then really jump.
+        if (pendingJumpAt >= 0f)
+        {
+            if (Time.time >= pendingJumpAt)
+            {
+                pendingJumpAt = -1f;
+                EndBrake("wall climb jump", false);
+                climb.Jump(wallNormal);
+            }
+            return;
+        }
+
         // Climb jump: Space was let go, and now it is pressed again in time.
         // (This is checked FIRST, because on the frame you press it, Space counts as held again.)
         if (spaceReleasedAt >= 0f && input.JumpTriggered && climb != null && climb.CanJump
@@ -147,8 +163,8 @@ public class PlayerWallBrake : MonoBehaviour
             if (clingAnim != null)
                 clingAnim.JumpFromWall(wallNormal,
                     movement.playerCamera != null ? movement.playerCamera.forward : -transform.forward);
-            EndBrake("wall climb jump", false);
-            climb.Jump(wallNormal);
+            // ANIM: wait jumpWindUp seconds so the animation leads the jump
+            pendingJumpAt = Time.time + jumpWindUp;
             return;
         }
 

@@ -88,7 +88,7 @@ public class ObjectiveCompass : MonoBehaviour
         // Find the Canvas to draw on (the same one as the quest panel if possible)
         Canvas c = null;
         if (ObjectivesUI.Instance != null) c = ObjectivesUI.Instance.GetComponentInParent<Canvas>();
-        if (c == null) c = FindFirstObjectByType<Canvas>();
+        if (c == null) c = FindGameCanvas(); // any canvas that is not the loading screen one
         if (c == null)
         {
             Debug.LogWarning("[ObjectiveCompass] No Canvas found in the scene.");
@@ -105,6 +105,18 @@ public class ObjectiveCompass : MonoBehaviour
         }
 
         BuildBar(c.rootCanvas.transform);
+    }
+
+    // Picks the first canvas that does not hold the loading screen, so the compass is never put on it
+    Canvas FindGameCanvas()
+    {
+        Canvas[] all = FindObjectsByType<Canvas>(FindObjectsSortMode.None);
+        foreach (Canvas cv in all)
+        {
+            if (cv.GetComponentInChildren<LoadingScreen>(true) != null) continue; // skip the loading screen canvas
+            return cv;
+        }
+        return all.Length > 0 ? all[0] : null;
     }
 
     // ------------------------------------------------------------ build the bar
@@ -326,9 +338,18 @@ public class ObjectiveCompass : MonoBehaviour
 
     // ------------------------------------------------------------ draw each frame
 
+    // True only when the bar and the 4 letters really exist (they can be missing if the canvas was rebuilt)
+    bool BarReady()
+    {
+        if (bar == null) return false;
+        for (int i = 0; i < letters.Length; i++)
+            if (letters[i] == null) return false;
+        return true;
+    }
+
     void LateUpdate()
     {
-        if (bar == null) return;
+        if (!BarReady()) return; // nothing to draw on yet, skip this frame instead of throwing an error
 
         ApplyLayout();
 
@@ -372,6 +393,7 @@ public class ObjectiveCompass : MonoBehaviour
         // ticks
         for (int i = 0; i < ticks.Count; i++)
         {
+            if (ticks[i] == null) continue; // skip a tick that was destroyed
             float delta = Mathf.DeltaAngle(yaw, tickAngles[i] + northOffset);
             float a = AlphaFor(delta);
             ticks[i].rectTransform.anchoredPosition = new Vector2(XFor(delta), LetterY);
@@ -386,6 +408,7 @@ public class ObjectiveCompass : MonoBehaviour
         {
             Marker m;
             if (tg.t == null || !active.TryGetValue(tg.t, out m)) continue;
+            if (m.root == null || m.icon == null || m.dist == null) continue; // skip a marker that was destroyed
 
             Vector3 d = tg.t.position - camPos;          // direction as seen from the camera
             float bearing = Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg;

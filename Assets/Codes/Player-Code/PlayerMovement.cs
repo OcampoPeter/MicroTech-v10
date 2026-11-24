@@ -165,6 +165,8 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
+        if (LoadingScreen.IsLoading) return; // frozen while the loading screen is up
+
         // Air time keeps counting while wall running too, so a long chain of jumps and wall runs keeps building speed
         if (controller.isGrounded)
         {

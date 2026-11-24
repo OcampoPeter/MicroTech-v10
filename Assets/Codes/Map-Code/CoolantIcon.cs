@@ -1,8 +1,3 @@
-// WHERE TO PUT THIS FILE: Assets > Codes > UI-Code
-// WHERE TO USE IT: in the CPU scene, right-click the Hierarchy > Create Empty,
-//                  name it "CoolantIcons", then drag this script onto it.
-// Needs the new HeatSystem.cs too (it has the IsInDanger line).
-
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -34,7 +29,15 @@ public class CoolantIcons : MonoBehaviour
 
     void Start()
     {
+        if (coolantLayer.value == 0) coolantLayer = LayerMask.GetMask("Coolant");
         if (heat == null) heat = FindFirstObjectByType<HeatSystem>();
+
+        // use the same Canvas as the heat bar, so the icons are always visible
+        if (iconParent == null && heat != null && heat.HeatBar != null)
+        {
+            Canvas hc = heat.HeatBar.GetComponentInParent<Canvas>(true);
+            if (hc != null) iconParent = hc.rootCanvas.GetComponent<RectTransform>();
+        }
 
         if (iconParent == null)
         {
@@ -51,6 +54,10 @@ public class CoolantIcons : MonoBehaviour
             if ((coolantLayer.value & (1 << col.gameObject.layer)) == 0) continue;
             markers.Add(new Marker { target = col, icon = CreateIcon() });
         }
+
+        Debug.Log("CoolantIcons: found " + markers.Count + " object(s) on the Coolant layer");
+        if (markers.Count == 0)
+            Debug.LogWarning("CoolantIcons: nothing is on the Coolant layer. Set your platform's Layer to Coolant.");
     }
 
     RectTransform CreateIcon()
