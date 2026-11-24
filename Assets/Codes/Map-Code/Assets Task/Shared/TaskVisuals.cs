@@ -1,82 +1,70 @@
-using UnityEngine;
+using UnityEngine; // Gives access to Unity classes like Renderer, Color, Bounds
 
-// Small helpers shared by the Bent, Missing and Fried tasks:
-//   - SetColor: tint a renderer without making a new material copy
-//   - GetBounds / FitFactor: size a model so it fits a platform
-public static class TaskVisuals
+public static class TaskVisuals // Small helpers shared by the Bent, Missing and Fried tasks
 {
-    static readonly int BaseColor = Shader.PropertyToID("_BaseColor"); // URP/HDRP
-    static readonly int Color_ = Shader.PropertyToID("_Color");        // Built-in
-    static readonly int Emission = Shader.PropertyToID("_EmissionColor");
+    static readonly int BaseColor = Shader.PropertyToID("_BaseColor"); // The color name used by URP/HDRP shaders
+    static readonly int Color_ = Shader.PropertyToID("_Color"); // The color name used by built-in shaders
+    static readonly int Emission = Shader.PropertyToID("_EmissionColor"); // The glow color name
 
-    // Color a renderer. emission > 0 makes it glow.
-    public static void SetColor(Renderer r, Color color, float emission = 0f)
+    public static void SetColor(Renderer r, Color color, float emission = 0f) // Colors a renderer, and makes it glow if emission is above 0
     {
-        if (r == null) return;
-        var block = new MaterialPropertyBlock();
-        r.GetPropertyBlock(block);
-        block.SetColor(BaseColor, color);
-        block.SetColor(Color_, color);
-        if (emission > 0f)
+        if (r == null) return; // Stop if there is no renderer
+        var block = new MaterialPropertyBlock(); // A small color override, so no new material copy is made
+        r.GetPropertyBlock(block); // Load the renderer's current override
+        block.SetColor(BaseColor, color); // Set the color for URP/HDRP shaders
+        block.SetColor(Color_, color); // Set the color for built-in shaders
+        if (emission > 0f) // If the color should glow
         {
-            block.SetColor(Emission, color * emission);
-            r.sharedMaterial.EnableKeyword("_EMISSION");
+            block.SetColor(Emission, color * emission); // Set the glow color
+            r.sharedMaterial.EnableKeyword("_EMISSION"); // Turn the glow feature on
         }
-        else
+        else // No glow wanted
         {
-            block.SetColor(Emission, Color.black);
+            block.SetColor(Emission, Color.black); // Turn the glow off
         }
-        r.SetPropertyBlock(block);
+        r.SetPropertyBlock(block); // Apply the override to the renderer
     }
 
-    // The size and position of a platform in the world (from its renderers, or its colliders).
-    public static Bounds GetBounds(Renderer[] renderers, Collider[] colliders)
+    public static Bounds GetBounds(Renderer[] renderers, Collider[] colliders) // Gets the size and position of a platform in the world
     {
-        bool has = false;
-        Bounds b = new Bounds(Vector3.zero, Vector3.one);
+        bool has = false; // True once we have a first bounds
+        Bounds b = new Bounds(Vector3.zero, Vector3.one); // The bounds we return
 
-        foreach (var r in renderers)
+        foreach (var r in renderers) // Go through each renderer
         {
-            if (!has) { b = r.bounds; has = true; }
-            else b.Encapsulate(r.bounds);
+            if (!has) { b = r.bounds; has = true; } // The first one starts the bounds
+            else b.Encapsulate(r.bounds); // The others make the bounds bigger
         }
 
-        // No renderers: use the colliders instead.
-        if (!has)
+        if (!has) // No renderers, so use the colliders instead
         {
-            foreach (var c in colliders)
+            foreach (var c in colliders) // Go through each collider
             {
-                if (!has) { b = c.bounds; has = true; }
-                else b.Encapsulate(c.bounds);
+                if (!has) { b = c.bounds; has = true; } // The first one starts the bounds
+                else b.Encapsulate(c.bounds); // The others make the bounds bigger
             }
         }
-        return b;
+        return b; // Give back the bounds
     }
 
-    // Works out how much a model must be scaled so it covers the same width and depth
-    // as the platform. It scales evenly (never stretched or squashed), so the height
-    // follows the same scale. 1 = the model is already the right size.
-    public static float FitFactor(GameObject modelPrefab, Bounds platformBounds)
+    public static float FitFactor(GameObject modelPrefab, Bounds platformBounds) // Works out how much to scale a model so it fits a platform
     {
-        // Measure a temporary copy at its own size, away from everything else.
-        GameObject temp = Object.Instantiate(modelPrefab, Vector3.zero, Quaternion.identity);
-        Renderer[] renderers = temp.GetComponentsInChildren<Renderer>();
+        GameObject temp = Object.Instantiate(modelPrefab, Vector3.zero, Quaternion.identity); // Make a temporary copy to measure
+        Renderer[] renderers = temp.GetComponentsInChildren<Renderer>(); // Get the copy's renderers
 
-        float factor = 1f;
-        if (renderers.Length > 0)
+        float factor = 1f; // 1 = the model is already the right size
+        if (renderers.Length > 0) // If the model has any renderer
         {
-            Bounds b = renderers[0].bounds;
-            for (int i = 1; i < renderers.Length; i++) b.Encapsulate(renderers[i].bounds);
+            Bounds b = renderers[0].bounds; // Start with the first renderer's bounds
+            for (int i = 1; i < renderers.Length; i++) b.Encapsulate(renderers[i].bounds); // Grow the bounds to include the others
 
-            float fx = b.size.x > 0.0001f ? platformBounds.size.x / b.size.x : 1f;
-            float fz = b.size.z > 0.0001f ? platformBounds.size.z / b.size.z : 1f;
-            factor = Mathf.Min(fx, fz); // the smaller one, so the model never sticks out
+            float fx = b.size.x > 0.0001f ? platformBounds.size.x / b.size.x : 1f; // Scale needed to match the width
+            float fz = b.size.z > 0.0001f ? platformBounds.size.z / b.size.z : 1f; // Scale needed to match the depth
+            factor = Mathf.Min(fx, fz); // Use the smaller one, so the model never sticks out
         }
 
-        // Switch the copy off right away and let Unity remove it at the end of the frame.
-        // (DestroyImmediate is not allowed while the player is touching something.)
-        temp.SetActive(false);
-        Object.Destroy(temp);
-        return factor;
+        temp.SetActive(false); // Switch the copy off right away
+        Object.Destroy(temp); // Let Unity remove the copy at the end of the frame
+        return factor; // Give back the scale
     }
 }

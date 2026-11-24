@@ -1,66 +1,60 @@
-using UnityEngine;
-using Unity.Cinemachine;
+using UnityEngine; // Gives access to Unity classes like MonoBehaviour, Mathf
+using Unity.Cinemachine; // Gives access to CinemachineCamera
 
-// SPEED FOV. Put this on the Player.
-// The camera's field of view gets wider the faster you go, so speed FEELS fast.
-// It works on the Cinemachine cameras (first and third person). Slow = normal view.
-public class SpeedFOV : MonoBehaviour
+public class SpeedFOV : MonoBehaviour // Widens the camera's field of view the faster you go
 {
-    [Header("References (leave empty to find them by itself)")]
-    public PlayerMovement player;
-    [Tooltip("The CinemachineCamera objects to widen. Empty = it finds every CinemachineCamera in the scene.")]
-    public CinemachineCamera[] cameras;
+    [Header("References (leave empty to find them by itself)")] // Title in the Inspector
+    public PlayerMovement player; // The player's movement script
+    [Tooltip("The CinemachineCamera objects to widen. Empty = it finds every CinemachineCamera in the scene.")] // Hover text in the Inspector
+    public CinemachineCamera[] cameras; // The cameras to widen
 
-    [Header("The effect")]
-    [Tooltip("Below this speed (m/s) the view stays normal.")]
-    public float startSpeed = 7f;
-    [Tooltip("At this speed (m/s) the view is at its widest.")]
-    public float fullSpeed = 18f;
-    [Tooltip("How many degrees wider the view gets at full speed.")]
-    public float extraFOV = 18f;
-    [Tooltip("How fast it widens (higher = snappier).")]
-    public float widenSpeed = 6f;
-    [Tooltip("How fast it goes back to normal.")]
-    public float narrowSpeed = 4f;
+    [Header("The effect")] // Title in the Inspector
+    [Tooltip("Below this speed (m/s) the view stays normal.")] // Hover text in the Inspector
+    public float startSpeed = 7f; // Speed where the widening starts
+    [Tooltip("At this speed (m/s) the view is at its widest.")] // Hover text in the Inspector
+    public float fullSpeed = 18f; // Speed where the view is widest
+    [Tooltip("How many degrees wider the view gets at full speed.")] // Hover text in the Inspector
+    public float extraFOV = 18f; // Extra degrees at full speed
+    [Tooltip("How fast it widens (higher = snappier).")] // Hover text in the Inspector
+    public float widenSpeed = 6f; // How fast the view widens
+    [Tooltip("How fast it goes back to normal.")] // Hover text in the Inspector
+    public float narrowSpeed = 4f; // How fast the view narrows
 
-    private float[] baseFOV;
-    private float extra;
+    private float[] baseFOV; // The normal field of view of each camera
+    private float extra; // The extra degrees right now
 
-    void Start()
+    void Start() // Runs once when the scene starts
     {
-        if (player == null) player = GetComponent<PlayerMovement>();
-        if (cameras == null || cameras.Length == 0)
-            cameras = FindObjectsByType<CinemachineCamera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        if (player == null) player = GetComponent<PlayerMovement>(); // Find the movement script if none was assigned
+        if (cameras == null || cameras.Length == 0) // If no cameras were assigned
+            cameras = FindObjectsByType<CinemachineCamera>(FindObjectsInactive.Include, FindObjectsSortMode.None); // Find every CinemachineCamera, even inactive ones
 
-        // Remember each camera's normal field of view
-        baseFOV = new float[cameras.Length];
-        for (int i = 0; i < cameras.Length; i++)
-            if (cameras[i] != null) baseFOV[i] = cameras[i].Lens.FieldOfView;
+        baseFOV = new float[cameras.Length]; // Make room for each normal field of view
+        for (int i = 0; i < cameras.Length; i++) // Go through each camera
+            if (cameras[i] != null) baseFOV[i] = cameras[i].Lens.FieldOfView; // Remember its normal field of view
     }
 
-    void LateUpdate()
+    void LateUpdate() // Runs every frame after all Update calls
     {
-        if (player == null || cameras == null) return;
+        if (player == null || cameras == null) return; // Stop if something is missing
 
-        float t = Mathf.InverseLerp(startSpeed, fullSpeed, player.HorizontalSpeed);
-        float target = t * extraFOV;
+        float t = Mathf.InverseLerp(startSpeed, fullSpeed, player.HorizontalSpeed); // How fast we are, from 0 to 1
+        float target = t * extraFOV; // The extra degrees we want
 
-        // Widen quickly, narrow a bit slower
-        float rate = target > extra ? widenSpeed : narrowSpeed;
-        extra = Mathf.Lerp(extra, target, rate * Time.deltaTime);
+        float rate = target > extra ? widenSpeed : narrowSpeed; // Widen quickly, narrow a bit slower
+        extra = Mathf.Lerp(extra, target, rate * Time.deltaTime); // Move toward the target smoothly
 
-        for (int i = 0; i < cameras.Length; i++)
+        for (int i = 0; i < cameras.Length; i++) // Go through each camera
         {
-            if (cameras[i] == null) continue;
-            cameras[i].Lens.FieldOfView = baseFOV[i] + extra;
+            if (cameras[i] == null) continue; // Skip destroyed cameras
+            cameras[i].Lens.FieldOfView = baseFOV[i] + extra; // Apply the normal view plus the extra
         }
     }
 
-    void OnDisable()
+    void OnDisable() // Runs when this script is turned off
     {
-        // Put the normal view back
-        if (cameras == null || baseFOV == null) return;
-        for (int i = 0; i < cameras.Length && i < baseFOV.Length; i++)
-            if (cameras[i] != null) cameras[i].Lens.FieldOfView = baseFOV[i];
+        if (cameras == null || baseFOV == null) return; // Stop if something is missing
+        for (int i = 0; i < cameras.Length && i < baseFOV.Length; i++) // Go through each camera
+            if (cameras[i] != null) cameras[i].Lens.FieldOfView = baseFOV[i]; // Put the normal view back
     }
 }

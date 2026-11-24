@@ -2,7 +2,6 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
-// The three states the game can be in.
 public enum GameState
 {
     Playing,
@@ -10,18 +9,17 @@ public enum GameState
     Crashed
 }
 
-// Step 3: the Game Manager now controls the end screens and the restart.
-// Put it on an empty object called "GameManager".
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance;
 
-    [Header("Screens (leave both turned OFF in the Hierarchy)")]
-    public GameObject crashPanel;      // the blue screen
-    public GameObject completePanel;   // shown when you reach the finish line
+    [Header("Screen (leave it turned OFF in the Hierarchy)")]
+    public GameObject crashPanel;
 
-    // Shown in the Inspector while you play, so you can watch it change
     public GameState State = GameState.Playing;
+
+    [Header("Where to go if the maze was opened on its own")]
+    public string fallbackReturnScene = "TS Room";
 
     void Awake() { Instance = this; }
 
@@ -29,13 +27,10 @@ public class GameManager : MonoBehaviour
     {
         Time.timeScale = 1f;
         if (crashPanel != null) crashPanel.SetActive(false);
-        if (completePanel != null) completePanel.SetActive(false);
     }
 
     void Update()
     {
-        // On the blue (crash) screen, R restarts the maze. Update still runs while time is frozen.
-        // On the complete screen R does nothing: use the RETURN button instead.
         if (State == GameState.Crashed && Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
             Restart();
     }
@@ -49,31 +44,34 @@ public class GameManager : MonoBehaviour
         if (State == GameState.Crashed)
         {
             if (crashPanel != null) crashPanel.SetActive(true);
-            Time.timeScale = 0f;   // freezes the game
+            Time.timeScale = 0f;
         }
         else if (State == GameState.Complete)
         {
-            if (completePanel != null) completePanel.SetActive(true);
-            Time.timeScale = 0f;
+            ReturnToTS();
         }
     }
-
-    [Header("Where Return goes if no scene was remembered")]
-    public string fallbackReturnScene = "TS Room";
 
     public void ReturnToTS()
     {
         if (State == GameState.Complete)
             PartRepair.MarkCurrentFixed();
 
-        string scene = string.IsNullOrEmpty(MapPortal.ReturnScene) ? fallbackReturnScene : MapPortal.ReturnScene;
-        Time.timeScale = 1f;   // un-freeze before loading
-        SceneManager.LoadScene(scene);
+        Time.timeScale = 1f;
+
+        if (MazeLoader.Instance != null && MazeLoader.Instance.InMaze)
+            MazeLoader.Instance.ReturnToTS();
+        else
+            SceneManager.LoadScene(string.IsNullOrEmpty(MapPortal.ReturnScene) ? fallbackReturnScene : MapPortal.ReturnScene);
     }
 
     public void Restart()
     {
-        Time.timeScale = 1f;   // un-freeze before reloading
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        Time.timeScale = 1f;
+
+        if (MazeLoader.Instance != null && MazeLoader.Instance.InMaze)
+            MazeLoader.Instance.RestartMaze();
+        else
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }

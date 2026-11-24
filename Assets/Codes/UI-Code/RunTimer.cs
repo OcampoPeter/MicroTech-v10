@@ -1,87 +1,89 @@
-using UnityEngine;
-using TMPro;
+using UnityEngine; // Unity basics
+using TMPro; // lets us use TextMeshPro
 
-// The speedrun timer. Put this on an empty object called "RunTimer".
-public class RunTimer : MonoBehaviour
+public class RunTimer : MonoBehaviour // the timer for the run
 {
-    public static RunTimer Instance;
+    public static RunTimer Instance; // easy access from other scripts
 
-    [Header("UI")]
-    public TMP_Text timerText;
-    [Tooltip("A second text placed next to the timer. It shows +3s when a hazard hits.")]
-    public TMP_Text penaltyText;
-    [Tooltip("How long the +3s stays on screen (seconds).")]
-    public float penaltyShowTime = 1.5f;
+    [Header("UI")] // Inspector title
+    public TMP_Text timerText; // the main timer text
+    public TMP_Text penaltyText; // the text that shows +3s when a hazard hits
+    public float penaltyShowTime = 1.5f; // how long the penalty text stays (seconds)
 
-    public float Time_ { get; private set; }   // seconds on the clock
-    public float PenaltyTotal { get; private set; }
+    public float Time_ { get; private set; } // seconds on the clock
+    public float PenaltyTotal { get; private set; } // total penalty seconds so far
 
-    private float penaltyShownAt = -10f;
-    private bool stopped;
+    private float penaltyShownAt = -10f; // when the last penalty appeared
+    private bool stopped; // true after the finish line
+    private bool started; // true after the first move
 
-    void Awake() { Instance = this; }
+    void Awake() { Instance = this; } // save this script for easy access
 
-    // Turns seconds into  hours:minutes:seconds.hundredths   (example: 375.6 -> 0:06:15.60)
-    // Public and static, so any other script can use it: RunTimer.FormatTime(seconds)
-    public static string FormatTime(float seconds, bool showHundredths = true)
+    public static string FormatTime(float seconds, bool showHundredths = true) // turns seconds into 0:06:15.60
     {
-        if (seconds < 0f) seconds = 0f;
-        int total = Mathf.FloorToInt(seconds * 100f);   // everything in hundredths of a second
-        int hundredths = total % 100;
-        int secs = (total / 100) % 60;
-        int mins = (total / 6000) % 60;
-        int hours = total / 360000;
+        if (seconds < 0f) seconds = 0f; // never show negative time
+        int total = Mathf.FloorToInt(seconds * 100f); // count everything in hundredths of a second
+        int hundredths = total % 100; // the hundredths part
+        int secs = (total / 100) % 60; // the seconds part
+        int mins = (total / 6000) % 60; // the minutes part
+        int hours = total / 360000; // the hours part
 
-        string text = hours.ToString() + ":" + mins.ToString("00") + ":" + secs.ToString("00");
-        if (showHundredths) text += "." + hundredths.ToString("00");
-        return text;
+        string text = hours.ToString() + ":" + mins.ToString("00") + ":" + secs.ToString("00"); // join hours, minutes, seconds
+        if (showHundredths) text += "." + hundredths.ToString("00"); // add the hundredths if wanted
+        return text; // give back the finished text
     }
 
-    void Start()
+    void Start() // runs once at the start
     {
-        if (penaltyText != null) penaltyText.text = "";
+        if (penaltyText != null) penaltyText.text = ""; // hide the penalty text
     }
 
-    void Update()
+    void Update() // runs every frame
     {
-        if (!stopped) Time_ += Time.deltaTime;
-        if (timerText != null)
-            timerText.text = "TIME " + FormatTime(Time_);
+        if (started && !stopped && !LoadingScreen.IsLoading) // timer is running and not loading
+            Time_ += Time.deltaTime; // add the frame time to the clock
 
-        // Fade the +3s out after it appears
-        if (penaltyText != null)
+        if (timerText != null) // if there is a timer text
+            timerText.text = "TIME " + FormatTime(Time_); // show the time
+
+        if (penaltyText != null) // if there is a penalty text
         {
-            float age = Time.time - penaltyShownAt;
-            if (age < penaltyShowTime)
+            float age = Time.time - penaltyShownAt; // how long since the penalty appeared
+            if (age < penaltyShowTime) // still showing
             {
-                Color c = penaltyText.color;
-                c.a = 1f - (age / penaltyShowTime);
-                penaltyText.color = c;
+                Color c = penaltyText.color; // get the current color
+                c.a = 1f - (age / penaltyShowTime); // fade it out over time
+                penaltyText.color = c; // apply the color
             }
-            else
+            else // time is up
             {
-                penaltyText.text = "";
+                penaltyText.text = ""; // clear the text
             }
         }
     }
 
-    // Used by the finish line: freezes the clock
-    public void Stop()
+    public bool HasStarted { get { return started; } } // other scripts can check if the timer started
+
+    public void StartTimer() // called on the first move
     {
-        stopped = true;
+        started = true; // start the clock
     }
 
-    // Used by hazards: adds seconds to the clock as a penalty
-    public void AddPenalty(float seconds)
+    public void Stop() // called at the finish line
     {
-        Time_ += seconds;
-        PenaltyTotal += seconds;
+        stopped = true; // freeze the clock
+    }
 
-        if (penaltyText != null)
+    public void AddPenalty(float seconds) // called by hazards
+    {
+        Time_ += seconds; // add the seconds to the clock
+        PenaltyTotal += seconds; // add them to the penalty total
+
+        if (penaltyText != null) // if there is a penalty text
         {
-            penaltyText.text = "+" + seconds.ToString("F0") + "s";
-            penaltyText.color = Color.red;
-            penaltyShownAt = Time.time;
+            penaltyText.text = "+" + seconds.ToString("F0") + "s"; // show how many seconds were added
+            penaltyText.color = Color.red; // make it red
+            penaltyShownAt = Time.time; // remember when it appeared
         }
     }
 }

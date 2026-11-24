@@ -1,36 +1,34 @@
-// WHERE TO PUT THIS FILE: Assets/Codes/RamButton.cs
-// Then drag it onto the HoverZone object of each RAM button.
-using UnityEngine;
-using UnityEngine.Events;
-using UnityEngine.EventSystems;
+using UnityEngine; // Unity basics
+using UnityEngine.Events; // lets us use UnityEvent
+using UnityEngine.EventSystems; // lets us detect pointer hover and click
 
-public class RamButton : MonoBehaviour,
-    IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
+public class RamButton : MonoBehaviour, // a button that lifts a RAM stick when hovered
+    IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler // detects pointer enter, exit and click
 {
-    [Header("The RAM stick that moves up (RamModel)")]
-    public Transform moveTarget;
-    public float raiseAmount = 0.3f;
-    public UnityEvent onClick;
+    [Header("The RAM stick that moves up (RamModel)")] // Inspector title
+    public Transform moveTarget; // the RAM stick that moves
+    public float raiseAmount = 0.3f; // how far it moves up
+    public UnityEvent onClick; // runs when the button is clicked
 
-    Vector3 startPos;
+    Vector3 startPos; // the starting position of the RAM stick
 
-    void Awake()
+    void Awake() // runs when the object loads
     {
-        startPos = moveTarget.position;
+        startPos = moveTarget.position; // remember where the stick started
     }
 
-    public void OnPointerEnter(PointerEventData e)
+    public void OnPointerEnter(PointerEventData e) // the pointer moved onto the button
     {
-        moveTarget.position = startPos + Vector3.up * raiseAmount;
+        moveTarget.position = startPos + Vector3.up * raiseAmount; // lift the stick up
     }
 
-    public void OnPointerExit(PointerEventData e)
+    public void OnPointerExit(PointerEventData e) // the pointer left the button
     {
-        moveTarget.position = startPos;
+        moveTarget.position = startPos; // put the stick back
     }
 
-    public void OnPointerClick(PointerEventData e)
+    public void OnPointerClick(PointerEventData e) // the button was clicked
     {
-        onClick.Invoke();
+        onClick.Invoke(); // run the click event
     }
 }

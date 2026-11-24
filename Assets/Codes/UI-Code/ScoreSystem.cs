@@ -26,7 +26,6 @@ public class ScoreSystem : MonoBehaviour
     [Tooltip("Only used when you press Play directly in this maze scene (no part carried in). 0 = use 1.")]
     public int directPlayDifficulty = 0;
 
-    // Worked out from the difficulty of the part you came from (1 if you started this scene directly)
     public int Difficulty { get; private set; }
     public float CurrentPar { get; private set; }
 
@@ -35,16 +34,15 @@ public class ScoreSystem : MonoBehaviour
     public int BestScore { get; private set; }
     public bool IsNewBest { get; private set; }
 
-    private const string BestKey = "BestScore";   // the name the score is saved under
+    private const string BestKey = "BestScore";
     public bool IsFinished { get; private set; }
 
     void Awake() { Instance = this; }
 
     void Start()
     {
-        BestScore = PlayerPrefs.GetInt(BestKey, 0);   // 0 if nothing saved yet
+        BestScore = PlayerPrefs.GetInt(BestKey, 0);
 
-        // Difficulty formula: par = base par x (1 - shrink) ^ (difficulty - 1)
         bool cameFromPart = !string.IsNullOrEmpty(PartRepair.CurrentPart);
         int level = (!cameFromPart && directPlayDifficulty > 0) ? directPlayDifficulty : PartRepair.CurrentDifficulty;
         Difficulty = Mathf.Max(1, level);
@@ -64,13 +62,10 @@ public class ScoreSystem : MonoBehaviour
     {
         if (IsFinished) return;
         IsFinished = true;
-        if (GameManager.Instance != null)
-            GameManager.Instance.SetState(GameState.Complete);
 
         RunTimer timer = RunTimer.Instance;
         timer.Stop();
 
-        // Score = base + (seconds under par x points) - (falls x penalty)
         int secondsUnderPar = Mathf.RoundToInt(CurrentPar - timer.Time_);
         float corruption = CorruptionSystem.Instance != null ? CorruptionSystem.Instance.Corruption : 0f;
         int corruptionPenalty = Mathf.RoundToInt(corruption * pointsLostPerCorruptionPercent);
@@ -78,11 +73,12 @@ public class ScoreSystem : MonoBehaviour
                      - Falls * pointsLostPerFall - corruptionPenalty;
         if (rawScore < 0) rawScore = 0;
 
-        // Harder mazes pay more: multiplier = 1 + bonus x (difficulty - 1)
         float multiplier = 1f + scoreBonusPerLevel * (Difficulty - 1);
         Score = Mathf.RoundToInt(rawScore * multiplier);
 
-        // Save it if it beats the best score
+        if (RunScores.Instance != null && !string.IsNullOrEmpty(PartRepair.CurrentPart))
+            RunScores.Instance.SetScore(PartRepair.CurrentPart, Score);
+
         if (Score > BestScore)
         {
             BestScore = Score;
@@ -92,6 +88,9 @@ public class ScoreSystem : MonoBehaviour
         }
 
         UpdateText();
+
+        if (GameManager.Instance != null)
+            GameManager.Instance.SetState(GameState.Complete);
     }
 
     void UpdateText()
@@ -106,7 +105,6 @@ public class ScoreSystem : MonoBehaviour
         scoreText.text = "FINISHED! SCORE " + Score.ToString() + "\n" + (IsNewBest ? "NEW BEST!" : best);
     }
 
-    // Right-click the ScoreSystem component and choose this to wipe the saved best score
     [ContextMenu("Reset Best Score")]
     void ResetBestScore()
     {

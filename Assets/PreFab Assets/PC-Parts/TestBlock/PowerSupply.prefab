@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 4224563560473668046}
   - component: {fileID: 5772307299989412774}
   - component: {fileID: 4147076971082868654}
+  - component: {fileID: 5368335012707181911}
   m_Layer: 0
   m_Name: PowerSupply
   m_TagString: Untagged
@@ -96,7 +97,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1e884a7c55785fa41ae7f869752ccabc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PartState
-  partId: RAM
+  partId: PowerSupply
   difficulty: 1
   brokenColor: {r: 1, g: 0.35, b: 0.35, a: 1}
   fixedColor: {r: 0.45, g: 1, b: 0.55, a: 1}
