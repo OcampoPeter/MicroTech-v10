@@ -1150,7 +1150,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   crashPanel: {fileID: 2720221321148310368}
-  completePanel: {fileID: 7539230649839581638}
   State: 0
   fallbackReturnScene: TS Room
 --- !u!1 &2720221321148310368

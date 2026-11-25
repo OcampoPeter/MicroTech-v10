@@ -13,17 +13,17 @@ MonoBehaviour:
   m_Name: PartCatalog
   m_EditorClassIdentifier: Assembly-CSharp::PartCatalog
   parts:
-  - partId: 
-    prefab: {fileID: 0}
-    difficulty: 0
+  - partId: RAM-BurntBentMiss
+    prefab: {fileID: 9216272262448175087, guid: 041eb8bd01413934f8709759e21656a5, type: 3}
+    difficulty: 1
     scene: {fileID: 102900000, guid: fab39b2b236d0014cb1ac9d8ddc6fcf5, type: 3}
     sceneName: RAM
-  - partId: 
-    prefab: {fileID: 0}
-    difficulty: 0
+  - partId: CPUCHIP-BurntBentMiss
+    prefab: {fileID: 7191779596592613805, guid: ab55ddf995f55344bb9f23eac881658c, type: 3}
+    difficulty: 2
     scene: {fileID: 102900000, guid: 4ec9ab62b85ab9445835b1c546b4623c, type: 3}
     sceneName: CPU
-  - partId: PowerSupply
+  - partId: PowerSupply-Broken
     prefab: {fileID: 600998391008100660, guid: 45909485cc022fe4db2478e9617625ca, type: 3}
     difficulty: 0
     scene: {fileID: 102900000, guid: 85c9cd491a12fd74d944d29c143c8294, type: 3}
